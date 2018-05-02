@@ -39,12 +39,10 @@ def parseFile(file):
             # Check if the key already exists
             if speaker_text_dict.has_key(key):
                 current_value = speaker_text_dict[key]
-                new_value = current_value + value
+                new_value = current_value + " " + value
                 speaker_text_dict[key] = new_value
             else:
                 speaker_text_dict[key] = value
-
-        speaker_text_dict[key] = value
 
     # Writes the dictionary to a csv file to sanity check. Still some parsing errors
     with open('Speaker_file.csv', 'wb') as csvfile:
