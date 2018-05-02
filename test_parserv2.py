@@ -5,6 +5,8 @@ from bs4 import BeautifulSoup
 import unicodedata
 import os
 import csv
+import pickle
+import re
 
 def remove_diacritic(input):
     '''
@@ -44,6 +46,8 @@ def parseFiles():
                 try:
                     key = talk.find('speaker').get_text()
                     key = remove_diacritic(key).decode('utf-8')
+                    if key.endswith('.'):
+                        key = key[:-1]
                 except AttributeError:
                     print("No speaker found")
                 # Value is speaker speech
@@ -61,16 +65,18 @@ def parseFiles():
                     if speaker_text_dict.has_key(key):
                         current_value = speaker_text_dict[key]
                         new_value = current_value + " " + value
+                        new_value = new_value.replace("\n", " ")
+                        new_value = re.sub(r'([ ]{2,})', ' ', new_value)
                         speaker_text_dict[key] = new_value
                     else:
+                        value = value.replace("\n", " ")
+                        value = re.sub(r'([ ]{2,})', ' ', value)
                         speaker_text_dict[key] = value
 
-            csv_filename = "" + doc_dates[0] + " a " + doc_dates[1] + ".csv"
-            # Writes the dictionary to a csv file to sanity check. Still some parsing errors
-            with open(csv_filename, 'wb') as csvfile:
-                writer = csv.writer(csvfile)
-                for key, value in speaker_text_dict.items():
-                    writer.writerow([key, value])
+            pickle_filename = "" + doc_dates[0] + " a " + doc_dates[1] + ".pickle"
+            # Serializes the dictionary to a pickle file to sanity check. 
+            with open(pickle_filename, 'wb') as handle:
+                pickle.dump(speaker_text_dict, handle, protocol = 0)
 
             filename.close()
 
