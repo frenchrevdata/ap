@@ -18,6 +18,7 @@ def parseFile(file):
     contents = file.read()
     soup = BeautifulSoup(contents, 'lxml')
     
+    doc_dates = extractDates(soup)
 
     speaker_text_dict = {}
 
@@ -44,8 +45,9 @@ def parseFile(file):
             else:
                 speaker_text_dict[key] = value
 
+    csv_filename = "" + doc_dates[0] + " a " + doc_dates[1] + ".csv"
     # Writes the dictionary to a csv file to sanity check. Still some parsing errors
-    with open('Speaker_file.csv', 'wb') as csvfile:
+    with open(csv_filename, 'wb') as csvfile:
         writer = csv.writer(csvfile)
         for key, value in speaker_text_dict.items():
             writer.writerow([key, value])
@@ -53,6 +55,15 @@ def parseFile(file):
     file.close()
 
     #print(speaker_text_dict.keys())
+
+# Parses dates from file being analyzed
+def extractDates(soup_file):
+    dates = soup_file.find_all('date')
+    relevant_dates = []
+    for date in dates:
+        if date.attrs:
+            relevant_dates.append(date)
+    return([relevant_dates[0]['value'], relevant_dates[1]['value']])
 
 
 # Code for parsing all files but getting memory errors
