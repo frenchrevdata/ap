@@ -32,23 +32,42 @@ def remove_diacritic(input):
     '''
     return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
-def remove_stopwords(input):
-    french_stopwords = stopwords.words('french')
+def load_stopwords(textfile):
+    stopwords = open(textfile, 'r')
+    lines = stopwords.readlines()
+    french_stopwords = []
+    for line in lines:
+        word = line.split(',')
+        #remove returns and new lines at the end of stop words so the parser catches matches
+        #also remove accents so the entire analysis is done without accents
+        word_to_append = remove_diacritic(unicode(word[0].replace("\n","").replace("\r",""), 'utf-8'))
+        french_stopwords.append(word_to_append)
+    return(french_stopwords)
+
+
+def remove_stopwords(input, stopwordfile):
+    """french_stopwords = stopwords.words('french')
     cleaned_stopwords = []
     cleaned_stopwords.append("les")
     for stopword in french_stopwords:
-        cleaned_stopwords.append(remove_diacritic(stopword))
+        cleaned_stopwords.append(remove_diacritic(stopword))"""
     filtered_text = ""
-    for word in input.split():
+    """for word in input.split():
         if word not in french_stopwords:
             if word != "les" and word != "a":
-                filtered_text = filtered_text + " " + word
+                filtered_text = filtered_text + " " + word"""
+    for word in input.split():
+        if word not in stopwordfile:
+            filtered_text = filtered_text + " " + word
     return filtered_text
 
 if __name__ == '__main__':
     import sys
     
     filename = sys.argv[1]
+    stopwords_file = sys.argv[2]
+
+    stopwords = load_stopwords(stopwords_file)
 
     with open(filename, 'rb') as handle:
         dictionary = pickle.load(handle)
@@ -59,8 +78,10 @@ if __name__ == '__main__':
     text = text.replace(",", "").replace(".", "").replace(":","")
     clean_text = remove_stopwords(text)"""
 
-    text = dictionary['M. Paul Nairac'].replace(";","").replace(",", "").replace(":","").replace(".","").replace("(","").replace(")","")
-    clean_text = remove_stopwords(text)
+    #remove all punctuation
+    text = dictionary['Vernier'].replace("'"," ").replace(";"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
+    #convert text to lowercase to align with stopword list
+    clean_text = remove_stopwords(text.lower(), stopwords)
 
     new_bigrams = compute_bigrams(clean_text)
     bigram_count = Counter(new_bigrams)
