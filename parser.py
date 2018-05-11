@@ -55,6 +55,10 @@ def findSpeeches(daily_soup, date):
 			speaker = remove_diacritic(speaker).decode('utf-8')
 			if speaker.endswith('.'):
 				speaker = speaker[:-1]
+			if speaker.endswith(","):
+				speaker = speaker[:-1]
+			if speaker.startswith('M. '):
+				speaker = speaker[3:]
 		except AttributeError:
 			pass
 		speech = talk.find_all('p')
@@ -102,6 +106,11 @@ def load_stopwords(textfile):
 def load_speakerlist(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'AP Speaker Authority List xlsx')
 	pd_list = pd_list.set_index('Names')
+	speakers = pd_list.index.tolist()
+	for speaker in speakers:
+		ind = speakers.index(speaker)
+		speakers[ind] = remove_diacritic(speaker).decode('utf-8')
+	pd_list.index = speakers
 	return pd_list
 
  	
