@@ -36,6 +36,7 @@ def parseFiles():
     files = os.listdir("Docs/")
     for filename in files:
         if filename.endswith(".xml"):
+        	print(filename)
         	filename = open('Docs/' + filename, "r")
         	contents = filename.read()
         	daily = re.findall(daily_regex, contents, overlapped=True)
@@ -49,6 +50,7 @@ def parseFiles():
 def findSpeeches(daily_soup, date):
 	id_base = date.replace("_","")
 	number_of_speeches = 0
+	#speech_of_day = ""
 	for talk in daily_soup.find_all('sp'):
 		try:
 			speaker = talk.find('speaker').get_text()
@@ -63,11 +65,13 @@ def findSpeeches(daily_soup, date):
 			pass
 		speech = talk.find_all('p')
 		text = ""
+		full_speech = ""
 		for section in speech:
 			text = text + section.get_text()
 		full_speech = remove_diacritic(text).decode('utf-8')
-		full_speech = full_speech.replace("\n"," ")
+		full_speech = full_speech.replace("\n"," ").replace("mm"," ").replace("nul"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
+		#speech_of_day = speech_of_day + full_speech
 		if speaker != "Le President":
 			if speaker in speaker_list.index.values:
 				number_of_speeches = number_of_speeches + 1
@@ -75,11 +79,18 @@ def findSpeeches(daily_soup, date):
 				speech_id = "" + id_base + "_" + str(number_of_speeches)
 				speechid_to_speaker[speech_id] = speaker_name
 				# Store raw speech
-				pickle_filename = "" + speech_id + ".pickle"
-				# Serializes the dictionary to a pickle file to sanity check. 
-				with open(pickle_filename, 'wb') as handle:
-					pickle.dump(full_speech, handle, protocol = 0)
+				txt_filename = "" + speech_id + ".txt"
+				# Serializes the dictionary to a pickle file to sanity check.
+				txtfile = open(txt_filename, 'w')
+				txtfile.write(str(full_speech))
+				txtfile.close() 
+				#with open(pickle_filename, 'wb') as handle:
+					#pickle.dump(full_speech, handle, protocol = 0)
 				compute_ngrams(speech_id, full_speech)
+	
+	# Compute n-grams on speeches from the entire day session
+	#speech_id_of_day = id_base
+	#compute_ngrams(speech_id_of_day, speech_of_day)
 
 	speeches_per_day[id_base] = number_of_speeches
 
@@ -129,10 +140,15 @@ def compute_ngrams(uniqueid, speech):
 	clean_text = remove_stopwords(speech.lower())
 	trigrams = compute_trigrams(clean_text)
 	speech_ngrams = Counter(trigrams)
-	pickle_filename = "" + uniqueid + "_ngrams" + ".pickle"
+	txt_filename = "" + uniqueid + "_ngrams" + ".txt"
+	# Serializes the dictionary to a pickle file to sanity check. 
+	txtfile = open(txt_filename, 'w')
+	txtfile.write(str(speech_ngrams))
+	txtfile.close()
+	"""pickle_filename = "" + uniqueid + "_ngrams" + ".pickle"
 	# Serializes the dictionary to a pickle file to sanity check. 
 	with open(pickle_filename, 'wb') as handle:
-		pickle.dump(speech_ngrams, handle, protocol = 0)
+		pickle.dump(speech_ngrams, handle, protocol = 0)"""
    
 
 
@@ -143,7 +159,11 @@ def extractDate(soup_file):
 	for date in dates:
 		if date.attrs:
 			relevant_dates.append(date)
-	return(relevant_dates[0]['value'])
+	if (len(relevant_dates) > 0):
+		return(relevant_dates[0]['value'])
+	else:
+		return("error")
+
 
 
 
