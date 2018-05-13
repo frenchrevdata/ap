@@ -16,7 +16,9 @@ from collections import Counter
 
 
 
-daily_regex = '(?:<p>[ ]{0,1}Séance)(?:[\s\S]+)(?:<p>[ ]{0,1}Séance)'
+#daily_regex = '(?:<p>[ ]{0,1}Séance)(?:[\s\S]+)(?:<p>[ ]{0,1}Séance)'
+#Seance followed by less than or equal to 4 line breaks (\n) then date value =
+daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
 speechid_to_speaker = {}
 speeches_per_day = {}
 global stopwords
@@ -39,18 +41,19 @@ def parseFiles():
         	print(filename)
         	filename = open('Docs/' + filename, "r")
         	contents = filename.read()
-        	daily = re.findall(daily_regex, contents, overlapped=True)
-        	for day in daily:
-		        soup = BeautifulSoup(day, 'lxml')
-		        date = extractDate(soup)
-		        findSpeeches(soup, date)
+        	soup = BeautifulSoup(contents, 'lxml')
+        	sessions = soup.find_all('div2', {"type": "session"})
+        	for session in sessions:
+		        date = extractDate(session)
+		        findSpeeches(session, date)
 	        filename.close()
 
 
 def findSpeeches(daily_soup, date):
 	id_base = date.replace("_","")
 	number_of_speeches = 0
-	#speech_of_day = ""
+	speeches_of_day = ""
+	dict_of_speeches = {}
 	for talk in daily_soup.find_all('sp'):
 		try:
 			speaker = talk.find('speaker').get_text()
@@ -75,18 +78,19 @@ def findSpeeches(daily_soup, date):
 		if speaker != "Le President":
 			if speaker in speaker_list.index.values:
 				number_of_speeches = number_of_speeches + 1
+				speeches_of_day = speeches_of_day + " " + full_speech
 				speaker_name = speaker_list.loc[speaker, "FullName"]
 				speech_id = "" + id_base + "_" + str(number_of_speeches)
 				speechid_to_speaker[speech_id] = speaker_name
-				# Store raw speech
-				txt_filename = "" + speech_id + ".txt"
-				# Serializes the dictionary to a pickle file to sanity check.
-				txtfile = open(txt_filename, 'w')
-				txtfile.write(str(full_speech))
-				txtfile.close() 
-				#with open(pickle_filename, 'wb') as handle:
-					#pickle.dump(full_speech, handle, protocol = 0)
-				compute_ngrams(speech_id, full_speech)
+				dict_of_speeches[speech_id] = full_speech
+	
+	# Computes ngrams on all the speeches from the given day
+	compute_ngrams(id_base, speeches_of_day)
+	
+	# Serializes the dictionary to a pickle file to sanity check.
+	pickle_filename = "" + id_base + "_speeches.pickle"
+	with open(pickle_filename, 'wb') as handle:
+		pickle.dump(dict_of_speeches, handle, protocol = 0)
 	
 	# Compute n-grams on speeches from the entire day session
 	#speech_id_of_day = id_base
