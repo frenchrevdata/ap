@@ -13,6 +13,8 @@ from nltk import word_tokenize
 from nltk.util import ngrams
 import collections
 from collections import Counter
+import os
+import gzip
 
 
 
@@ -21,6 +23,7 @@ from collections import Counter
 daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
 speechid_to_speaker = {}
 speeches_per_day = {}
+names_not_caught = set()
 global stopwords
 global speaker_list
 
@@ -42,10 +45,15 @@ def parseFiles():
         	filename = open('Docs/' + filename, "r")
         	contents = filename.read()
         	soup = BeautifulSoup(contents, 'lxml')
-        	sessions = soup.find_all('div2', {"type": "session"})
+        	volDates = extractVolDates(soup)
+        	beginDate = volDates[0]
+        	endDate = volDates[1]
+        	sessions = soup.find_all(['div2', 'div3'], {"type": ["session", "other"]})
+        	#sessions.append(soup.find_all('div2', {"type": "other"}))
         	for session in sessions:
 		        date = extractDate(session)
-		        findSpeeches(session, date)
+		        if (date >= beginDate) and (date <= endDate) and (date != "error"):
+		        	findSpeeches(session, date)
 	        filename.close()
 
 
@@ -62,10 +70,22 @@ def findSpeeches(daily_soup, date):
 				speaker = speaker[:-1]
 			if speaker.endswith(","):
 				speaker = speaker[:-1]
-			if speaker.startswith('M. '):
+			if speaker.endswith(", "):
+				speaker = speaker[:-1]
+			if speaker.startswith('M.'):
+				speaker = speaker[2:]
+			if speaker.startswith('M '):
+				speaker = speaker[2:]
+			if speaker.startswith('MM. '):
+				speaker = speaker[4:]
+			if speaker.startswith(' M. '):
 				speaker = speaker[3:]
+			if speaker.startswith(' '):
+				speaker = speaker[1:]
+			if speaker.endswith(' '):
+				speaker = speaker[:-1]
 		except AttributeError:
-			pass
+			speaker = ""
 		speech = talk.find_all('p')
 		text = ""
 		full_speech = ""
@@ -83,12 +103,18 @@ def findSpeeches(daily_soup, date):
 				speech_id = "" + id_base + "_" + str(number_of_speeches)
 				speechid_to_speaker[speech_id] = speaker_name
 				dict_of_speeches[speech_id] = full_speech
+			else:
+				names_not_caught.add(speaker)
 	
 	# Computes ngrams on all the speeches from the given day
 	compute_ngrams(id_base, speeches_of_day)
-	
+
 	# Serializes the dictionary to a pickle file to sanity check.
-	pickle_filename = "" + id_base + "_speeches.pickle"
+	try:
+		os.mkdir('../Speeches')
+	except OSError:
+		pass
+	pickle_filename = "../Speeches/" + id_base + "_speeches.pickle"
 	with open(pickle_filename, 'wb') as handle:
 		pickle.dump(dict_of_speeches, handle, protocol = 0)
 	
@@ -144,9 +170,13 @@ def compute_ngrams(uniqueid, speech):
 	clean_text = remove_stopwords(speech.lower())
 	trigrams = compute_trigrams(clean_text)
 	speech_ngrams = Counter(trigrams)
-	txt_filename = "" + uniqueid + "_ngrams" + ".txt"
+	try:
+		os.mkdir('../Ngrams')
+	except OSError:
+		pass
+	txt_filename = "../Ngrams/" + uniqueid + "_ngrams" + ".txt.gz"
 	# Serializes the dictionary to a pickle file to sanity check. 
-	txtfile = open(txt_filename, 'w')
+	txtfile = gzip.open(txt_filename, 'wb')
 	txtfile.write(str(speech_ngrams))
 	txtfile.close()
 	"""pickle_filename = "" + uniqueid + "_ngrams" + ".pickle"
@@ -168,6 +198,14 @@ def extractDate(soup_file):
 	else:
 		return("error")
 
+def extractVolDates(soup_file):
+    dates = soup_file.find_all('date')
+    relevant_dates = []
+    for date in dates:
+        if date.attrs:
+            relevant_dates.append(date)
+    return([relevant_dates[0]['value'], relevant_dates[1]['value']])
+
 
 
 
@@ -176,6 +214,10 @@ if __name__ == '__main__':
     stopwords = load_stopwords('FrenchStopwords.txt')
     speaker_list = load_speakerlist('AP_Speaker_Authority_List_Edited.xlsx')
     parseFiles()
+    txt_filename = "" + "Names_not_caught" + ".txt"
+    txtfile = open(txt_filename, 'w')
+    txtfile.write(str(names_not_caught))
+    txtfile.close()
 
 
     
