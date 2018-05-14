@@ -92,7 +92,7 @@ def findSpeeches(daily_soup, date):
 		for section in speech:
 			text = text + section.get_text()
 		full_speech = remove_diacritic(text).decode('utf-8')
-		full_speech = full_speech.replace("\n"," ").replace("mm"," ").replace("nul"," ")
+		full_speech = full_speech.replace("\n"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
 		#speech_of_day = speech_of_day + full_speech
 		if speaker != "Le President":
@@ -125,10 +125,10 @@ def findSpeeches(daily_soup, date):
 	speeches_per_day[id_base] = number_of_speeches
 
 
-def compute_trigrams(input):
+def make_ngrams(input, amount):
 	token = word_tokenize(input)
-	trigrams = ngrams(token, 3)
-	return trigrams
+	n_grams = ngrams(token, amount)
+	return n_grams
 
 
 def load_stopwords(textfile):
@@ -168,8 +168,8 @@ def remove_stopwords(input):
 def compute_ngrams(uniqueid, speech):
 	speech = speech.replace("'"," ").replace(";"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
 	clean_text = remove_stopwords(speech.lower())
-	trigrams = compute_trigrams(clean_text)
-	speech_ngrams = Counter(trigrams)
+	n_grams = make_ngrams(clean_text, 2)
+	speech_ngrams = Counter(n_grams)
 	try:
 		os.mkdir('../Ngrams')
 	except OSError:
