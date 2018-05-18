@@ -106,17 +106,28 @@ def findSpeeches(daily_soup, date):
 		full_speech = full_speech.replace("\n"," ").replace("--"," ").replace("!"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
 		full_speech = re.sub(r'([0-9]{1,4})', ' ', full_speech)
+		speaker_name = ""
 		#speech_of_day = speech_of_day + full_speech
 		if speaker != "Le President":
 			if speaker in speaker_list.index.values:
-				number_of_speeches = number_of_speeches + 1
-				speeches_of_day = speeches_of_day + " " + full_speech
+				#number_of_speeches = number_of_speeches + 1
+				#speeches_of_day = speeches_of_day + " " + full_speech
 				speaker_name = speaker_list.loc[speaker, "FullName"]
-				speech_id = "" + id_base + "_" + str(number_of_speeches)
+				"""speech_id = "" + id_base + "_" + str(number_of_speeches)
 				speechid_to_speaker[speech_id] = speaker_name
-				dict_of_speeches[speech_id] = full_speech
+				dict_of_speeches[speech_id] = full_speech"""
 			else:
-				names_not_caught.add(speaker)
+				for i, name in enumerate(speaker_list['LastName']):
+					if speaker.find(name) != -1:
+						speaker_name = speaker_list["FullName"].iloc[i]
+		if speaker_name is not "":
+			number_of_speeches = number_of_speeches + 1
+			speeches_of_day = speeches_of_day + " " + full_speech
+			speech_id = "" + id_base + "_" + str(number_of_speeches)
+			speechid_to_speaker[speech_id] = speaker_name
+			dict_of_speeches[speech_id] = full_speech
+		else:
+			names_not_caught.add(speaker)
 	
 	# Computes ngrams on all the speeches from the given day
 	compute_ngrams(id_base, speeches_of_day)
@@ -227,7 +238,7 @@ def extractVolDates(soup_file):
 if __name__ == '__main__':
     import sys
     stopwords = load_stopwords('FrenchStopwords.txt')
-    speaker_list = load_speakerlist('AP_Speaker_Authority_List_Edited.xlsx')
+    speaker_list = load_speakerlist('AP_Speaker_Authority_List_Edited_2.xlsx')
     parseFiles()
     txt_filename = "" + "Names_not_caught" + ".txt"
     txtfile = open(txt_filename, 'w')
