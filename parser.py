@@ -23,6 +23,7 @@ import gzip
 daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
 speechid_to_speaker = {}
 speeches_per_day = {}
+dates = set()
 names_not_caught = set()
 global stopwords
 global speaker_list
@@ -46,19 +47,27 @@ def parseFiles():
         	contents = filename.read()
         	soup = BeautifulSoup(contents, 'lxml')
         	volDates = extractVolDates(soup)
-        	beginDate = volDates[0]
-        	endDate = volDates[1]
         	sessions = soup.find_all(['div2', 'div3'], {"type": ["session", "other"]})
         	#sessions.append(soup.find_all('div2', {"type": "other"}))
         	for session in sessions:
 		        date = extractDate(session)
-		        if (date >= beginDate) and (date <= endDate) and (date != "error"):
-		        	findSpeeches(session, date)
+		        if (date >= "1789-05-05") and (date <= "1795-01-04") and (date != "error"):
+		        	if date in dates:
+		        		date = date + "_soir"
+		        		if date in dates:
+		        			date = date + "2"
+		        			findSpeeches(session, date)
+		        		else:
+		        			findSpeeches(session, date)
+		        			dates.add(date)		        		
+		        	else:
+		        		findSpeeches(session, date)
+		        		dates.add(date)
 	        filename.close()
 
 
 def findSpeeches(daily_soup, date):
-	id_base = date.replace("_","")
+	id_base = date.replace("/","_")
 	number_of_speeches = 0
 	speeches_of_day = ""
 	dict_of_speeches = {}
@@ -84,6 +93,8 @@ def findSpeeches(daily_soup, date):
 				speaker = speaker[1:]
 			if speaker.endswith(' '):
 				speaker = speaker[:-1]
+			if speaker.endswith('.'):
+				speaker = speaker[:-1]
 		except AttributeError:
 			speaker = ""
 		speech = talk.find_all('p')
@@ -92,8 +103,9 @@ def findSpeeches(daily_soup, date):
 		for section in speech:
 			text = text + section.get_text()
 		full_speech = remove_diacritic(text).decode('utf-8')
-		full_speech = full_speech.replace("\n"," ")
+		full_speech = full_speech.replace("\n"," ").replace("--"," ").replace("!"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
+		full_speech = re.sub(r'([0-9]{1,4})', ' ', full_speech)
 		#speech_of_day = speech_of_day + full_speech
 		if speaker != "Le President":
 			if speaker in speaker_list.index.values:
@@ -166,17 +178,20 @@ def remove_stopwords(input):
 
 
 def compute_ngrams(uniqueid, speech):
-	speech = speech.replace("'"," ").replace(";"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
+	speech = speech.replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
 	clean_text = remove_stopwords(speech.lower())
+	clean_text = clean_text.replace("mm secretaire", " ").replace("assemble nationale", " ").replace("monsieur president", " ").replace("convention nationale", " ").replace("archives parliamentaire", " ").replace("republique francaise", " ").replace("ordre jour", " ").replace("corps legislatif", " ")
 	n_grams = make_ngrams(clean_text, 2)
 	speech_ngrams = Counter(n_grams)
 	try:
 		os.mkdir('../Ngrams')
 	except OSError:
 		pass
-	txt_filename = "../Ngrams/" + uniqueid + "_ngrams" + ".txt.gz"
+	#txt_filename = "../Ngrams/" + uniqueid + "_ngrams" + ".txt.gz"
+	txt_filename = "../Ngrams/" + uniqueid + "_ngrams" + ".txt"
 	# Serializes the dictionary to a pickle file to sanity check. 
-	txtfile = gzip.open(txt_filename, 'wb')
+	#txtfile = gzip.open(txt_filename, 'wb')
+	txtfile = open(txt_filename, 'w')
 	txtfile.write(str(speech_ngrams))
 	txtfile.close()
 	"""pickle_filename = "" + uniqueid + "_ngrams" + ".pickle"
