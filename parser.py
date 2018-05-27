@@ -75,6 +75,7 @@ def findSpeeches(daily_soup, date):
 		try:
 			speaker = talk.find('speaker').get_text()
 			speaker = remove_diacritic(speaker).decode('utf-8')
+			speaker = speaker.replace("-"," ")
 			if speaker.endswith('.'):
 				speaker = speaker[:-1]
 			if speaker.endswith(","):
@@ -141,9 +142,6 @@ def findSpeeches(daily_soup, date):
 	with open(pickle_filename, 'wb') as handle:
 		pickle.dump(dict_of_speeches, handle, protocol = 0)
 	
-	# Compute n-grams on speeches from the entire day session
-	#speech_id_of_day = id_base
-	#compute_ngrams(speech_id_of_day, speech_of_day)
 
 	speeches_per_day[id_base] = number_of_speeches
 
