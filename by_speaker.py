@@ -17,36 +17,15 @@ import os
 import gzip
 from make_ngrams import compute_ngrams
 
-raw_speeches_1 = {}
-raw_speeches_2 = {}
-speechid_to_speaker_1 = {}
-speechid_to_speaker_2 = {}
+raw_speeches = {}
+speechid_to_speaker = {}
 speeches_per_speaker = {}
 ngrams_per_speaker = {}
 
-def load_dictionaries():
-	raw_speeches_1 = pickle.load(open("raw_speeches_1.pickle", "rb"))
-	speechid_to_speaker_1 = pickle.load(open("speechid_to_speaker_1.pickle", "rb"))
-	raw_speeches_2 = pickle.load(open("raw_speeches_2.pickle", "rb"))
-	speechid_to_speaker_2 = pickle.load(open("speechid_to_speaker_2.pickle", "rb"))
 
 def aggregate_by_speaker():
-	for speechid in raw_speeches_1:
-		if speechid in speechid_to_speaker_1:
-			speaker_name = speechid_to_speaker_1[speechid]
-		else:
-			speaker_name = speechid_to_speaker_2[speechid]
-		speech = raw_speeches[speechid]
-		if speaker_name in speeches_per_speaker:
-			speeches_per_speaker[speaker_name] = speeches_per_speaker[speaker_name] + "" + speech
-		else:
-			speeches_per_speaker[speaker_name] = speech
-
-	for speechid in raw_speeches_2:
-		if speechid in speechid_to_speaker_1:
-			speaker_name = speechid_to_speaker_1[speechid]
-		else:
-			speaker_name = speechid_to_speaker_2[speechid]
+	for speechid in raw_speeches:
+		speaker_name = speechid_to_speaker[speechid]
 		speech = raw_speeches[speechid]
 		if speaker_name in speeches_per_speaker:
 			speeches_per_speaker[speaker_name] = speeches_per_speaker[speaker_name] + "" + speech
@@ -61,7 +40,8 @@ def ngrams_by_speaker():
 
 if __name__ == '__main__':
     import sys
-    load_dictionaries()
+    raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
+    speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
     aggregate_by_speaker()
     ngrams_by_speaker()
     pickle_filename = "by_speaker.pickle"

@@ -132,15 +132,6 @@ def findSpeeches(daily_soup, date):
 		else:
 			names_not_caught.add(speaker)
 
-	# Serializes the dictionary to a pickle file to sanity check.
-	try:
-		os.mkdir('../Speeches')
-	except OSError:
-		pass
-	pickle_filename = "../Speeches/" + id_base + "_speeches.pickle"
-	with open(pickle_filename, 'wb') as handle:
-		pickle.dump(dict_of_speeches, handle, protocol = 0)
-	
 
 	speeches_per_day[id_base] = number_of_speeches
 
