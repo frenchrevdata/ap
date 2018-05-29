@@ -16,34 +16,40 @@ from collections import Counter
 import os
 import gzip
 from make_ngrams import compute_ngrams
-
-raw_speeches = {}
-speechid_to_speaker = {}
-speeches_per_speaker = {}
-ngrams_per_speaker = {}
+import math
 
 
-def aggregate_by_speaker():
-	for speechid in raw_speeches:
+def remove_diacritic(input):
+    '''
+    Accept a unicode string, and return a normal string (bytes in Python 3)
+    without any diacritical marks.
+    '''
+    return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
+
+
+def aggregate_by_speaker(raw_speeches, speechid_to_speaker):
+	speaker_names = set()
+	for speechid in speechid_to_speaker:
 		speaker_name = speechid_to_speaker[speechid]
-		speech = raw_speeches[speechid]
-		if speaker_name in speeches_per_speaker:
-			speeches_per_speaker[speaker_name] = speeches_per_speaker[speaker_name] + "" + speech
-		else:
-			speeches_per_speaker[speaker_name] = speech
+		if (speaker_name in speakers_to_analyze.index.values) and (speaker_name not in speaker_names):
+			speaker_names.add(speaker_name)
+			speech = ""
+			for identity in raw_speeches:
+				if speaker_name == speechid_to_speaker[identity]:
+					speech = speech + " " + raw_speeches[identity]
+			speaker_ngrams = compute_ngrams(speech)
+			pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
+			with open(pickle_filename, 'wb') as handle:
+				pickle.dump(speaker_ngrams, handle, protocol = 0)
 
-def ngrams_by_speaker():
-	for speaker in speeches_per_speaker:
-		text = speeches_per_speaker[speaker]
-		ngrams_per_speaker[speaker] = compute_ngrams(text)
 
 
 if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
-    aggregate_by_speaker()
-    ngrams_by_speaker()
-    pickle_filename = "by_speaker.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(ngrams_per_speaker, handle, protocol = 0)
+    try:
+    	os.mkdir('../Speakers')
+    except OSError:
+    	pass
+    aggregate_by_speaker(raw_speeches, speechid_to_speaker)
