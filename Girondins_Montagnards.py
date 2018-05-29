@@ -52,7 +52,7 @@ def aggregate_by_speaker():
 				pickle.dump(speaker_ngrams, handle, protocol = 0)
 
 
-def aggregate_by_group():
+def aggregate_by_group(Girondins, Montagnards):
 	files = os.listdir("../Speakers/")
 	for filename in files:
 		with open('../Speakers/' + filename, "r") as f:
@@ -71,51 +71,6 @@ def aggregate_by_group():
 			except NameError:
 				Montagnards = speaker_data
 
-	diff_counter = {}
-	Girondin = dict(Girondins)
-	Montagnard = dict(Montagnards)
-
-	# Normalize counts
-	girondin_sum = 0
-	for key in Girondin:
-		girondin_sum = girondin_sum + Girondin[key]
-	for key in Girondin:
-		if Girondin[key] >= 3:
-			Girondin[key] = float(Girondin[key])/girondin_sum
-		else:
-			Girondin[key] = 0
-	
-	montagnard_sum = 0
-	for key in Montagnard:
-		montagnard_sum = montagnard_sum + Montagnard[key]
-	for key in Montagnard:
-		if Montagnard[key] >= 3:
-			Montagnard[key] = float(Montagnard[key])/montagnard_sum
-		else:
-			Montagnard[key] = 0
-
-
-	# Compute the Euclidean distance between the two vectors
-	## When only bigrams in both groups accounted for
-	"""for bigram in Girondin:
-		if bigram in Montagnard:
-			diff_counter[bigram] = Girondin[bigram] - Montagnard[bigram]"""
-
-	## When every bigram accounted for
-	for bigram in Girondin:
-		diff_counter[bigram] = Girondin[bigram]
-	for bigram in Montagnard:
-		if bigram in diff_counter:
-			diff_counter[bigram] = diff_counter[bigram] - Montagnard[bigram]
-		else:
-			diff_counter[bigram] = Montagnard[bigram]
-
-	sum_of_squares = 0
-	for entry in diff_counter:
-		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
-	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
-
 	Gir_output_file = "Girondins_counts.csv"
 	with open(Gir_output_file, mode='w') as gf:
 		gf.write('Bigrams|freq\n')
@@ -128,6 +83,59 @@ def aggregate_by_group():
 		for bigram, count in Montagnards.items():
 			if count >= 3:
 				mf.write('{}|{}\n'.format(bigram, count))
+
+	compute_distance(Girondins, Montagnards)
+	
+def compute_distance(Girondins, Montagnards):
+	diff_counter = {}
+
+	# Normalize counts
+	all_sum = 0
+	girondin_sum = 0
+	for key in Girondins:
+		all_sum = all_sum + Girondins[key]
+	for key in Girondins:
+		if Girondins[key] >= 3:
+			Girondins[key] = float(Girondins[key])/all_sum
+		else:
+			Girondins[key] = 0
+	
+	montagnard_sum = 0
+	for key in Montagnards:
+		all_sum = all_sum + Montagnards[key]
+	for key in Montagnards:
+		if Montagnards[key] >= 3:
+			Montagnards[key] = float(Montagnards[key])/all_sum
+		else:
+			Montagnards[key] = 0
+
+
+	# Compute the Euclidean distance between the two vectors
+	## When only bigrams in both groups accounted for
+	for bigram in Girondins:
+		if bigram in Montagnards:
+			diff_counter[bigram] = Girondins[bigram] - Montagnards[bigram]
+
+	sum_of_squares = 0
+	for entry in diff_counter:
+		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
+	euclidean_distance = math.sqrt(sum_of_squares)
+	print(euclidean_distance)
+
+	## When every bigram accounted for
+	"""for bigram in Montagnards:
+		if bigram in Girondins:
+			Montagnards[bigram] = Girondins[bigram] - Montagnards[bigram]
+	for bigram in Girondins:
+		if bigram not in Montagnards:
+			Montagnards[bigram] = Girondins[bigram]
+
+	sum_of_squares = 0
+	for entry in Montagnards:
+		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
+	euclidean_distance = math.sqrt(sum_of_squares)
+	print(euclidean_distance)"""
+
 
 
 def load_list(speakernames):
@@ -150,4 +158,4 @@ if __name__ == '__main__':
     except OSError:
     	pass
     #aggregate_by_speaker()
-    aggregate_by_group()
+    aggregate_by_group(Girondins, Montagnards)
