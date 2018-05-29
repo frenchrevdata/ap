@@ -46,18 +46,11 @@ def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 			except NameError:
 				Montagnards = speaker_data
 
-	Gir_output_file = "Girondins_counts.csv"
-	with open(Gir_output_file, mode='w') as gf:
-		gf.write('Bigrams|freq\n')
-		for bigram, count in Girondins.items():
-			if count >= 3:
-				gf.write('{}|{}\n'.format(bigram, count))
-	Mont_output_file = "Montagnards_counts.csv"
-	with open(Mont_output_file, mode='w') as mf:
-		mf.write('Bigrams|freq\n')
-		for bigram, count in Montagnards.items():
-			if count >= 3:
-				mf.write('{}|{}\n'.format(bigram, count))
+	Girondins = {k:v for k,v in Girondins.items() if v >= 3}
+	print_to_csv(Girondins, "Girondins_counts.csv")
+
+	Montagnards = {k:v for k,v in Montagnards.items() if v >= 3}
+	print_to_csv(Montagnards, "Montagnards_counts.csv")
 
 	compute_distance(Girondins, Montagnards)
 	
@@ -80,19 +73,9 @@ def compute_distance(Girondins, Montagnards):
 	for key in Montagnards:
 		Montagnards[key] = float(Montagnards[key])/all_sum
 
-
-	Gir_output_file = "Girondins_counts_normalized.csv"
-	with open(Gir_output_file, mode='w') as gf:
-		gf.write('Bigrams|freq\n')
-		for bigram, count in Girondins.items():
-			gf.write('{}|{}\n'.format(bigram, count))
-	Mont_output_file = "Montagnards_counts_normalized.csv"
-	with open(Mont_output_file, mode='w') as mf:
-		mf.write('Bigrams|freq\n')
-		for bigram, count in Montagnards.items():
-			mf.write('{}|{}\n'.format(bigram, count))
-
-
+	print_to_csv(Girondins, "Girondins_counts_normalized.csv")
+	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")
+	
 	# Compute the Euclidean distance between the two vectors
 	## When only bigrams in both groups accounted for
 	"""for bigram in Girondins:
@@ -118,6 +101,13 @@ def compute_distance(Girondins, Montagnards):
 		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
 	print(euclidean_distance)
+
+def print_to_csv(dictionary, filename):
+	output_file = filename
+	with open(filename, mode='w') as f:
+		f.write('Bigrams|freq\n')
+		for bigram, count in dictionary.items():
+			f.write('{}|{}\n'.format(bigram, count))
 
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
