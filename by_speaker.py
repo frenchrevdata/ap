@@ -27,7 +27,7 @@ def remove_diacritic(input):
     return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
 
-def aggregate_by_speaker(raw_speeches, speechid_to_speaker):
+def aggregate_by_speaker(speakers_to_analyze, raw_speeches, speechid_to_speaker):
 	speaker_names = set()
 	for speechid in speechid_to_speaker:
 		speaker_name = speechid_to_speaker[speechid]
@@ -42,14 +42,24 @@ def aggregate_by_speaker(raw_speeches, speechid_to_speaker):
 			with open(pickle_filename, 'wb') as handle:
 				pickle.dump(speaker_ngrams, handle, protocol = 0)
 
+def load_list(speakernames):
+	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
+	pd_list = pd_list.set_index('Name')
+	speakers = pd_list.index.tolist()
+	for speaker in speakers:
+		ind = speakers.index(speaker)
+		speakers[ind] = remove_diacritic(speaker).decode('utf-8')
+	pd_list.index = speakers
+	return pd_list
 
 
 if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
+    speakers_to_analyze = load_list("Girondins and Montagnards.xlsx")
     try:
     	os.mkdir('../Speakers')
     except OSError:
     	pass
-    aggregate_by_speaker(raw_speeches, speechid_to_speaker)
+    aggregate_by_speaker(speakers_to_analyze, raw_speeches, speechid_to_speaker)

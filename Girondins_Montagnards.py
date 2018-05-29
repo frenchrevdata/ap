@@ -88,7 +88,7 @@ def compute_distance(Girondins, Montagnards):
 
 	# Compute the Euclidean distance between the two vectors
 	## When only bigrams in both groups accounted for
-	"""for bigram in Girondins:
+	for bigram in Girondins:
 		if bigram in Montagnards:
 			diff_counter[bigram] = Girondins[bigram] - Montagnards[bigram]
 
@@ -96,10 +96,10 @@ def compute_distance(Girondins, Montagnards):
 	for entry in diff_counter:
 		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)"""
+	print(euclidean_distance)
 
 	## When every bigram accounted for
-	for bigram in Montagnards:
+	"""for bigram in Montagnards:
 		if bigram in Girondins:
 			Montagnards[bigram] = Girondins[bigram] - Montagnards[bigram]
 	for bigram in Girondins:
@@ -110,7 +110,7 @@ def compute_distance(Girondins, Montagnards):
 	for entry in Montagnards:
 		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
+	print(euclidean_distance)"""
 
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')

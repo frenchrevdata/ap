@@ -15,18 +15,18 @@ import collections
 from collections import Counter
 import os
 import gzip
+from make_ngrams import compute_ngrams
 
 
 
 #daily_regex = '(?:<p>[ ]{0,1}Séance)(?:[\s\S]+)(?:<p>[ ]{0,1}Séance)'
 #Seance followed by less than or equal to 4 line breaks (\n) then date value =
 daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
+
+#raw_speeches = {}
 speechid_to_speaker = {}
-speeches_per_day = {}
-raw_speeches = {}
-dates = set()
 names_not_caught = set()
-global stopwords
+speeches_per_day = {}
 global speaker_list
 
 
@@ -39,8 +39,9 @@ def remove_diacritic(input):
     return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
 
-def parseFiles():
+def parseFiles(raw_speeches):
     files = os.listdir("Docs/")
+    dates = set()
     for filename in files:
         if filename.endswith(".xml"):
         	print(filename)
@@ -56,21 +57,18 @@ def parseFiles():
 		        		date = date + "_soir"
 		        		if date in dates:
 		        			date = date + "2"
-		        			findSpeeches(session, date)
+		        			findSpeeches(raw_speeches, session, date)
 		        		else:
-		        			findSpeeches(session, date)
+		        			findSpeeches(raw_speeches, session, date)
 		        			dates.add(date)		        		
 		        	else:
-		        		findSpeeches(session, date)
+		        		findSpeeches(raw_speeches, session, date)
 		        		dates.add(date)
 	        filename.close()
 
-
-def findSpeeches(daily_soup, date):
+def findSpeeches(raw_speeches, daily_soup, date):
 	id_base = date.replace("/","_")
 	number_of_speeches = 0
-	speeches_of_day = ""
-	dict_of_speeches = {}
 	for talk in daily_soup.find_all('sp'):
 		try:
 			speaker = talk.find('speaker').get_text()
@@ -124,29 +122,15 @@ def findSpeeches(daily_soup, date):
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
-			speeches_of_day = speeches_of_day + " " + full_speech
 			speech_id = "" + id_base + "_" + str(number_of_speeches)
 			speechid_to_speaker[speech_id] = speaker_name
-			dict_of_speeches[speech_id] = full_speech
 			raw_speeches[speech_id] = full_speech
 		else:
 			names_not_caught.add(speaker)
 
-
 	speeches_per_day[id_base] = number_of_speeches
 
 
-def load_stopwords(textfile):
-	stopwords_from_file = open(textfile, 'r')
-	lines = stopwords_from_file.readlines()
-	french_stopwords = []
-	for line in lines:
-		word = line.split(',')
-		#remove returns and new lines at the end of stop words so the parser catches matches
-		#also remove accents so the entire analysis is done without accents
-		word_to_append = remove_diacritic(unicode(word[0].replace("\n","").replace("\r",""), 'utf-8'))
-		french_stopwords.append(word_to_append)
-	return(french_stopwords)
 
 
 def load_speakerlist(speakernames):
@@ -158,14 +142,6 @@ def load_speakerlist(speakernames):
 		speakers[ind] = remove_diacritic(speaker).decode('utf-8')
 	pd_list.index = speakers
 	return pd_list
-
-
-def remove_stopwords(input):
-	filtered_text = ""
-	for word in input.split():
-		if word not in stopwords:
-			filtered_text = filtered_text + " " + word
-	return filtered_text
 
 
 # Parses dates from file being analyzed
@@ -184,9 +160,9 @@ def extractDate(soup_file):
 
 if __name__ == '__main__':
     import sys
-    stopwords = load_stopwords('FrenchStopwords.txt')
     speaker_list = load_speakerlist('AP_Speaker_Authority_List_Edited_2.xlsx')
-    parseFiles()
+    raw_speeches = {}
+    parseFiles(raw_speeches)
     txt_filename = "" + "Names_not_caught" + ".txt"
     txtfile = open(txt_filename, 'w')
     txtfile.write(str(names_not_caught))
@@ -194,9 +170,9 @@ if __name__ == '__main__':
     pickle_filename = "speechid_to_speaker.pickle"
     with open(pickle_filename, 'wb') as handle:
     	pickle.dump(speechid_to_speaker, handle, protocol = 0)
-	pickle_filename_2 = "raw_speeches.pickle"
-	with open(pickle_filename_2, 'wb') as handle:
-		pickle.dump(raw_speeches, handle, protocol = 0)
+    pickle_filename_2 = "raw_speeches.pickle"
+    with open(pickle_filename_2, 'wb') as handle:
+    	pickle.dump(raw_speeches, handle, protocol = 0)
 
 
     
