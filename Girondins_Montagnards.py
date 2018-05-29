@@ -16,14 +16,16 @@ from collections import Counter
 import os
 import gzip
 from make_ngrams import compute_ngrams
+import math
 
 raw_speeches = {}
 speechid_to_speaker = {}
 speaker_names = set()
-
-global speakers_to_analyze
 Girondins = Counter()
 Montagnards = Counter()
+
+global speakers_to_analyze
+
 
 
 def remove_diacritic(input):
@@ -49,6 +51,7 @@ def aggregate_by_speaker():
 			with open(pickle_filename, 'wb') as handle:
 				pickle.dump(speaker_ngrams, handle, protocol = 0)
 
+
 def aggregate_by_group():
 	files = os.listdir("../Speakers/")
 	for filename in files:
@@ -68,6 +71,51 @@ def aggregate_by_group():
 			except NameError:
 				Montagnards = speaker_data
 
+	diff_counter = {}
+	Girondin = dict(Girondins)
+	Montagnard = dict(Montagnards)
+
+	# Normalize counts
+	girondin_sum = 0
+	for key in Girondin:
+		girondin_sum = girondin_sum + Girondin[key]
+	for key in Girondin:
+		if Girondin[key] >= 3:
+			Girondin[key] = float(Girondin[key])/girondin_sum
+		else:
+			Girondin[key] = 0
+	
+	montagnard_sum = 0
+	for key in Montagnard:
+		montagnard_sum = montagnard_sum + Montagnard[key]
+	for key in Montagnard:
+		if Montagnard[key] >= 3:
+			Montagnard[key] = float(Montagnard[key])/montagnard_sum
+		else:
+			Montagnard[key] = 0
+
+
+	# Compute the Euclidean distance between the two vectors
+	## When only bigrams in both groups accounted for
+	"""for bigram in Girondin:
+		if bigram in Montagnard:
+			diff_counter[bigram] = Girondin[bigram] - Montagnard[bigram]"""
+
+	## When every bigram accounted for
+	for bigram in Girondin:
+		diff_counter[bigram] = Girondin[bigram]
+	for bigram in Montagnard:
+		if bigram in diff_counter:
+			diff_counter[bigram] = diff_counter[bigram] - Montagnard[bigram]
+		else:
+			diff_counter[bigram] = Montagnard[bigram]
+
+	sum_of_squares = 0
+	for entry in diff_counter:
+		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
+	euclidean_distance = math.sqrt(sum_of_squares)
+	print(euclidean_distance)
+
 	Gir_output_file = "Girondins_counts.csv"
 	with open(Gir_output_file, mode='w') as gf:
 		gf.write('Bigrams|freq\n')
@@ -80,7 +128,6 @@ def aggregate_by_group():
 		for bigram, count in Montagnards.items():
 			if count >= 3:
 				mf.write('{}|{}\n'.format(bigram, count))
-		
 
 
 def load_list(speakernames):
