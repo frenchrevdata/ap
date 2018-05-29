@@ -66,29 +66,36 @@ def compute_distance(Girondins, Montagnards):
 
 	# Normalize counts
 	all_sum = 0
+
+	Girondins = {k:v for k,v in Girondins.items() if v >= 3}
 	for key in Girondins:
 		all_sum = all_sum + Girondins[key]
-	
+	Montagnards = {k:v for k,v in Montagnards.items() if v >= 3}
 	for key in Montagnards:
 		all_sum = all_sum + Montagnards[key]
 
-
 	for key in Girondins:
-		if Girondins[key] >= 3:
-			Girondins[key] = float(Girondins[key])/all_sum
-		else:
-			Girondins[key] = 0
+		Girondins[key] = float(Girondins[key])/all_sum
 
 	for key in Montagnards:
-		if Montagnards[key] >= 3:
-			Montagnards[key] = float(Montagnards[key])/all_sum
-		else:
-			Montagnards[key] = 0
+		Montagnards[key] = float(Montagnards[key])/all_sum
+
+
+	Gir_output_file = "Girondins_counts_normalized.csv"
+	with open(Gir_output_file, mode='w') as gf:
+		gf.write('Bigrams|freq\n')
+		for bigram, count in Girondins.items():
+			gf.write('{}|{}\n'.format(bigram, count))
+	Mont_output_file = "Montagnards_counts_normalized.csv"
+	with open(Mont_output_file, mode='w') as mf:
+		mf.write('Bigrams|freq\n')
+		for bigram, count in Montagnards.items():
+			mf.write('{}|{}\n'.format(bigram, count))
 
 
 	# Compute the Euclidean distance between the two vectors
 	## When only bigrams in both groups accounted for
-	for bigram in Girondins:
+	"""for bigram in Girondins:
 		if bigram in Montagnards:
 			diff_counter[bigram] = Girondins[bigram] - Montagnards[bigram]
 
@@ -96,10 +103,10 @@ def compute_distance(Girondins, Montagnards):
 	for entry in diff_counter:
 		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
+	print(euclidean_distance)"""
 
 	## When every bigram accounted for
-	"""for bigram in Montagnards:
+	for bigram in Montagnards:
 		if bigram in Girondins:
 			Montagnards[bigram] = Girondins[bigram] - Montagnards[bigram]
 	for bigram in Girondins:
@@ -110,7 +117,7 @@ def compute_distance(Girondins, Montagnards):
 	for entry in Montagnards:
 		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)"""
+	print(euclidean_distance)
 
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
