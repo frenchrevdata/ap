@@ -8,6 +8,7 @@ import csv
 import pickle
 import regex as re
 import pandas as pd
+from pandas import ExcelWriter
 import numpy as np
 from nltk import word_tokenize
 from nltk.util import ngrams
@@ -73,12 +74,18 @@ def compute_distance(Girondins, Montagnards):
 	for key in Montagnards:
 		Montagnards[key] = float(Montagnards[key])/all_sum
 
+	df = pd.DataFrame([Girondins, Montagnards])
+	df = df.transpose()
+	writer = pd.ExcelWriter('combined.xlsx')
+	df.to_excel(writer, 'Sheet1')
+	writer.save()
+
 	print_to_csv(Girondins, "Girondins_counts_normalized.csv")
 	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")
 	
 	# Compute the Euclidean distance between the two vectors
 	## When only bigrams in both groups accounted for
-	"""for bigram in Girondins:
+	for bigram in Girondins:
 		if bigram in Montagnards:
 			diff_counter[bigram] = Girondins[bigram] - Montagnards[bigram]
 
@@ -86,10 +93,10 @@ def compute_distance(Girondins, Montagnards):
 	for entry in diff_counter:
 		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)"""
+	print(euclidean_distance)
 
 	## When every bigram accounted for
-	for bigram in Montagnards:
+	"""for bigram in Montagnards:
 		if bigram in Girondins:
 			Montagnards[bigram] = Girondins[bigram] - Montagnards[bigram]
 	for bigram in Girondins:
@@ -100,7 +107,7 @@ def compute_distance(Girondins, Montagnards):
 	for entry in Montagnards:
 		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
+	print(euclidean_distance)"""
 
 def print_to_csv(dictionary, filename):
 	output_file = filename
