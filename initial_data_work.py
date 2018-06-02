@@ -16,6 +16,7 @@ from collections import Counter
 import os
 import gzip
 from make_ngrams import compute_ngrams
+import xlsxwriter
 
 
 
@@ -27,6 +28,7 @@ daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]
 speechid_to_speaker = {}
 names_not_caught = set()
 speeches_per_day = {}
+speakers_using_find = set()
 global speaker_list
 
 
@@ -73,26 +75,16 @@ def findSpeeches(raw_speeches, daily_soup, date):
 		try:
 			speaker = talk.find('speaker').get_text()
 			speaker = remove_diacritic(speaker).decode('utf-8')
-			speaker = speaker.replace("-"," ")
-			if speaker.endswith('.'):
-				speaker = speaker[:-1]
+			speaker = speaker.replace(".","").replace(":","").replace("MM ", "").replace("MM. ","").replace("M ", "").replace("de ","").replace("M. ","").replace("M, ","").replace("M- ","").replace("M; ","").replace("M* ","")
 			if speaker.endswith(","):
 				speaker = speaker[:-1]
 			if speaker.endswith(", "):
 				speaker = speaker[:-1]
-			if speaker.startswith('M.'):
-				speaker = speaker[2:]
-			if speaker.startswith('M '):
-				speaker = speaker[2:]
-			if speaker.startswith('MM. '):
-				speaker = speaker[4:]
 			if speaker.startswith(' M. '):
 				speaker = speaker[3:]
 			if speaker.startswith(' '):
 				speaker = speaker[1:]
 			if speaker.endswith(' '):
-				speaker = speaker[:-1]
-			if speaker.endswith('.'):
 				speaker = speaker[:-1]
 		except AttributeError:
 			speaker = ""
@@ -117,8 +109,10 @@ def findSpeeches(raw_speeches, daily_soup, date):
 				#speaker_name = speaker_list.loc[speaker, "FullName"]
 			else:
 				for i, name in enumerate(speaker_list['LastName']):
-					if speaker.find(name) != -1 :
-						speaker_name = speaker_list["FullName"].iloc[i]
+					if (speaker.find(",") == -1) and (speaker.find(" et ") == -1):
+						if speaker.find(name) != -1 :
+							speakers_using_find.add(speaker + "\n")
+							speaker_name = speaker_list["FullName"].iloc[i]
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
@@ -126,7 +120,7 @@ def findSpeeches(raw_speeches, daily_soup, date):
 			speechid_to_speaker[speech_id] = speaker_name
 			raw_speeches[speech_id] = full_speech
 		else:
-			names_not_caught.add(speaker)
+			names_not_caught.add(speaker + "\n")
 
 	speeches_per_day[id_base] = number_of_speeches
 
@@ -160,13 +154,17 @@ def extractDate(soup_file):
 
 if __name__ == '__main__':
     import sys
-    speaker_list = load_speakerlist('AP_Speaker_Authority_List_Edited_2.xlsx')
+    speaker_list = load_speakerlist('Copy of AP_Speaker_Authority_List_Edited_2.xlsx')
     raw_speeches = {}
     parseFiles(raw_speeches)
-    txt_filename = "" + "Names_not_caught" + ".txt"
-    txtfile = open(txt_filename, 'w')
-    txtfile.write(str(names_not_caught))
+    txtfile = open("names_not_caught.txt", 'w')
+    for name in sorted(names_not_caught):
+    	txtfile.write(name)
     txtfile.close()
+    file = open('speakers_using_find.txt', 'w')
+    for item in sorted(speakers_using_find):
+    	file.write(item)
+    file.close()
     pickle_filename = "speechid_to_speaker.pickle"
     with open(pickle_filename, 'wb') as handle:
     	pickle.dump(speechid_to_speaker, handle, protocol = 0)

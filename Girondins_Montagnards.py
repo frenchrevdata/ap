@@ -53,6 +53,12 @@ def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 	Montagnards = {k:v for k,v in Montagnards.items() if v >= 3}
 	print_to_csv(Montagnards, "Montagnards_counts.csv")
 
+	df = pd.DataFrame([Girondins, Montagnards])
+	df = df.transpose()
+	writer = pd.ExcelWriter('combined_frequency.xlsx')
+	df.to_excel(writer, 'Sheet1')
+	writer.save()
+
 	compute_distance(Girondins, Montagnards)
 	
 def compute_distance(Girondins, Montagnards):
@@ -76,7 +82,7 @@ def compute_distance(Girondins, Montagnards):
 
 	df = pd.DataFrame([Girondins, Montagnards])
 	df = df.transpose()
-	writer = pd.ExcelWriter('combined.xlsx')
+	writer = pd.ExcelWriter('combined_normalized.xlsx')
 	df.to_excel(writer, 'Sheet1')
 	writer.save()
 
@@ -130,7 +136,7 @@ if __name__ == '__main__':
     import sys
     Girondins = Counter()
     Montagnards = Counter()
-    speakers_to_analyze = load_list("Girondins and Montagnards.xlsx")
+    speakers_to_analyze = load_list("Copy of Girondins and Montagnards.xlsx")
     try:
     	os.mkdir('../Speakers')
     except OSError:
