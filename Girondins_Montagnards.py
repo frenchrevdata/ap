@@ -8,12 +8,13 @@ import csv
 import pickle
 import regex as re
 import pandas as pd
-from pandas import ExcelWriter
+from pandas import *
 import numpy as np
 from nltk import word_tokenize
 from nltk.util import ngrams
 import collections
 from collections import Counter
+from collections import defaultdict
 import os
 import gzip
 from make_ngrams import compute_ngrams
@@ -59,8 +60,50 @@ def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 	df.to_excel(writer, 'Sheet1')
 	writer.save()
 
-	compute_distance(Girondins, Montagnards)
+	gir_frequency = process_excel("Girondins_frequency.xlsx")
+	mont_frequencey = process_excel("Montagnards_frequency.xlsx")
+	prior = process_excel("prior.xlsx")
+
 	
+	computelogpostodds(gir_frequency, mont_frequencey, prior)
+
+	compute_distance(Girondins, Montagnards)
+
+def process_excel(filename):
+	xls = ExcelFile(filename)
+	first = xls.parse(xls.sheet_names[0])
+	first = first.set_index('Bigrams')
+	first = first.fillna(0)
+	second = first.to_dict()
+	for entry in second:
+		third = second[entry]
+	for item in third:
+		third[item] = int(third[item])
+	return(third)
+	
+	
+def computelogpostodds(dict1, dict2, prior):
+	sigmasquared = defaultdict(float)
+	sigma = defaultdict(float)
+	delta = defaultdict(float)
+
+	n1 = sum(dict1.values())
+	n2 = sum(dict2.values())
+	nprior = sum(prior.values())
+
+	for word in prior.keys():
+		l1 = float(dict1[word] + prior[word]) / ((n1 + nprior) - (dict1[word] + prior[word]))
+		l2 = float(dict2[word] + prior[word]) / ((n2 + nprior) - (dict2[word] + prior[word]))
+		sigmasquared[word] = 1/(float(dict1[word]) + float(prior[word])) + 1/(float(dict2[word]) + float(prior[word]))
+		sigma[word] = math.sqrt(sigmasquared[word])
+		delta[word] = (math.log(l1) - math.log(l2))/sigma[word]
+
+	writer = pd.ExcelWriter('log_post_odds.xlsx')
+	data = pd.DataFrame(delta.items())
+	data.to_excel(writer, "Sheet1")
+	writer.save()
+
+
 def compute_distance(Girondins, Montagnards):
 	diff_counter = {}
 
