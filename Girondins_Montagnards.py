@@ -31,6 +31,8 @@ def remove_diacritic(input):
 
 def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 	files = os.listdir("../Speakers/")
+	gir_doc_freq = {}
+	mont_doc_freq = {}
 	for filename in files:
 		with open('../Speakers/' + filename, "r") as f:
 			speaker_data = pickle.load(f)
@@ -38,20 +40,22 @@ def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 		speaker = re.findall(r'([a-zA-Z\- \']+)_ngrams.pickle', filename)[0]
 		party = speakers_to_analyze.loc[speaker, "Party"]
 		if party == "Girondins":
+			gir_doc_freq = check_num_speakers(speaker_data, gir_doc_freq)
 			try:
 				Girondins = Girondins + speaker_data
 			except NameError:
 				Girondins = speaker_data
 		else:
+			mont_doc_freq = check_num_speakers(speaker_data, mont_doc_freq)
 			try:
 				Montagnards = Montagnards + speaker_data
 			except NameError:
 				Montagnards = speaker_data
 
-	Girondins = {k:v for k,v in Girondins.items() if v >= 3}
+	Girondins = {k:v for k,v in Girondins.items() if (v >= 3) and (gir_doc_freq[k] > 2)}
 	print_to_csv(Girondins, "Girondins_counts.csv")
 
-	Montagnards = {k:v for k,v in Montagnards.items() if v >= 3}
+	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3) and (mont_doc_freq[k] > 2)}
 	print_to_csv(Montagnards, "Montagnards_counts.csv")
 
 	df = pd.DataFrame([Girondins, Montagnards])
@@ -68,6 +72,14 @@ def aggregate_by_group(speakers_to_analyze, Girondins, Montagnards):
 	computelogpostodds(gir_frequency, mont_frequencey, prior)
 
 	compute_distance(Girondins, Montagnards)
+
+def check_num_speakers(speech_data, party_dict):
+	for bigram in speech_data:
+		if bigram in party_dict:
+			party_dict[bigram] = party_dict[bigram] + 1
+		else:
+			party_dict[bigram] = 1
+	return party_dict
 
 def process_excel(filename):
 	xls = ExcelFile(filename)
@@ -109,14 +121,8 @@ def compute_distance(Girondins, Montagnards):
 
 	# Normalize counts
 	all_sum = 0
-
-	Girondins = {k:v for k,v in Girondins.items() if v >= 3}
-	for key in Girondins:
-		all_sum = all_sum + Girondins[key]
-	Montagnards = {k:v for k,v in Montagnards.items() if v >= 3}
-	for key in Montagnards:
-		all_sum = all_sum + Montagnards[key]
-
+	all_sum = all_sum + sum(Girondins.values()) + sum(Montagnards.values())
+	
 	for key in Girondins:
 		Girondins[key] = float(Girondins[key])/all_sum
 
@@ -180,8 +186,4 @@ if __name__ == '__main__':
     Girondins = Counter()
     Montagnards = Counter()
     speakers_to_analyze = load_list("Copy of Girondins and Montagnards.xlsx")
-    try:
-    	os.mkdir('../Speakers')
-    except OSError:
-    	pass
     aggregate_by_group(speakers_to_analyze, Girondins, Montagnards)
