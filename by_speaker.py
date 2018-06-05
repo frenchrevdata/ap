@@ -17,8 +17,10 @@ import os
 import gzip
 from make_ngrams import compute_ngrams
 import math
+from collections import defaultdict
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
+doc_freq = defaultdict(lambda: 0)
 
 def remove_diacritic(input):
     '''
@@ -31,34 +33,43 @@ def remove_diacritic(input):
 def aggregate_by_speaker(speakers_to_analyze, raw_speeches, speechid_to_speaker):
 	speaker_names = set()
 	speakers_to_consider = []
+	gir_num_speeches = 0
+	mont_num_speeches = 0
+	bigrams_speeches = collections.defaultdict()
 	for speaker in speakers_to_analyze.index.values:
 		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
 	for speaker_name in speakers_to_consider:
 		print speaker_name
-		speech = ""
+		party = speakers_to_analyze.loc[speaker_name, "Party"]
+		speech = Counter()
 		for identity in raw_speeches:
 			date = re.findall(date_regex, str(identity))[0]
 			if (date >= "1792-09-20") and (speaker_name == speechid_to_speaker[identity]):
-				speech = speech + " " + raw_speeches[identity]
-		speaker_ngrams = compute_ngrams(speech)
+				indv_speech_ngram = compute_ngrams(raw_speeches[identity])
+				for bigram in indv_speech_ngram:
+					if bigram in bigrams_speeches:
+						bigrams_speeches[bigram].append(identity)
+					else:
+						bigrams_speeches[bigram] = []
+						bigrams_speeches[bigram].append(identity)
+				if party == "Girondins":
+					gir_num_speeches += 1
+				else:
+					mont_num_speeches += 1
+				speech = speech + indv_speech_ngram
+		#speaker_ngrams = compute_ngrams(speech)
 		pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
 		with open(pickle_filename, 'wb') as handle:
-			pickle.dump(speaker_ngrams, handle, protocol = 0)
+			pickle.dump(speech, handle, protocol = 0)
 
-	"""for speechid in speechid_to_speaker:
-		date = re.findall(date_regex, str(speechid))[0]
-		if date >= '1792-09-20':
-			speaker_name = speechid_to_speaker[speechid]
-			if (speaker_name in speakers_to_consider) and (speaker_name not in speaker_names):
-				speaker_names.add(speaker_name)
-				speech = ""
-				for identity in raw_speeches:
-					if speaker_name == speechid_to_speaker[identity]:
-						speech = speech + " " + raw_speeches[identity]
-				speaker_ngrams = compute_ngrams(speech)
-				pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
-				with open(pickle_filename, 'wb') as handle:
-					pickle.dump(speaker_ngrams, handle, protocol = 0)"""
+	with open('bigrams_to_speeches.csv', 'wb') as outfile:
+		writer = csv.writer(outfile)
+		for key, val in bigrams_speeches.items():
+			writer.writerow([key, val])
+
+	print gir_num_speeches
+	print mont_num_speeches
+
 
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
