@@ -47,10 +47,9 @@ logpostodds <- function(dataframe){
       ((n1 + nprior) - (fulldata[bigram, "Girondins"] +fulldata[bigram, "prior"]))
     l2 <- as.double(fulldata[bigram, "Montagnards"] + fulldata[bigram, "prior"]) / 
       ((n2 + nprior) - (fulldata[bigram, "Montagnards"] + fulldata[bigram, "prior"]))
-    intermediate_value <- 1/(as.double(fulldata[bigram, "Girondins"]) + as.double(fulldata[bigram, "prior"])) + 
+    fulldata[bigram, "sigmasquared"] <- 1/(as.double(fulldata[bigram, "Girondins"]) + as.double(fulldata[bigram, "prior"])) + 
       1/(as.double(fulldata[bigram, "Montagnards"]) + as.double(fulldata[bigram, "prior"]))
-    fulldata[bigram, "sigmasquared"] <- intermediate_value
-    fulldata[bigram, "sigma"] <- sqrt(intermediate_value)
+    fulldata[bigram, "sigma"] <- sqrt(fulldata[bigram, "sigmasquared"])
     fulldata[bigram, "delta"] <- (log(l1) - log(l2))/fulldata[bigram, "sigma"]
   }
   return(fulldata)
