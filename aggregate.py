@@ -85,10 +85,10 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 		for key, val in bigrams_speeches.items():
 			writer.writerow([key, val])
 
-	Girondins = {k:v for k,v in Girondins.items() if (v >= 3) and (len(gir_doc_freq[k]) > 2)}
+	Girondins = {k:v for k,v in Girondins.items() if (v >= 3)} #and (len(gir_doc_freq[k]) > 1)}
 	print_to_csv(Girondins, "Girondins_counts.csv")
 
-	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3) and (len(mont_doc_freq[k]) > 2)}
+	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3)} #and (len(mont_doc_freq[k]) > 1)}
 	print_to_csv(Montagnards, "Montagnards_counts.csv")
 
 	print_to_excel(Girondins, Montagnards, 'combined_frequency.xlsx')
@@ -146,16 +146,17 @@ def compute_distance(Girondins, Montagnards):
 	#print("---------")
 
 	## When every bigram accounted for
+	diff_counter = {}
 	for bigram in Montagnards:
 		if bigram in Girondins:
-			Montagnards[bigram] = Girondins[bigram] - Montagnards[bigram]
+			diff_counter[bigram] = Girondins[bigram] - Montagnards[bigram]
 	for bigram in Girondins:
 		if bigram not in Montagnards:
-			Montagnards[bigram] = Girondins[bigram]
+			diff_counter[bigram] = Girondins[bigram]
 
 	sum_of_squares = 0
-	for entry in Montagnards:
-		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
+	for entry in diff_counter:
+		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
 	#print(euclidean_distance)
 
@@ -198,6 +199,7 @@ def print_to_csv(dictionary, filename):
 def print_to_excel(dict1, dict2, filename):
 	df = pd.DataFrame([dict1, dict2])
 	df = df.transpose()
+	df.columns = ["Girondins", "Montagnards"]
 	writer = pd.ExcelWriter(filename)
 	df.to_excel(writer, 'Sheet1')
 	writer.save()
