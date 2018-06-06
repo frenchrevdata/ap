@@ -73,11 +73,12 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 						Montagnards = Montagnards + indv_speech_ngram
 					except NameError:
 						Montagnards = indv_speech_ngram
-				speech = speech + indv_speech_ngram
+				#speech = speech + indv_speech_ngram
 		#speaker_ngrams = compute_ngrams(speech)
-		pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
+		"""pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
 		with open(pickle_filename, 'wb') as handle:
-			pickle.dump(speech, handle, protocol = 0)
+			pickle.dump(speech, handle, protocol = 0)"""
+
 
 	with open('bigrams_to_speeches.csv', 'wb') as outfile:
 		writer = csv.writer(outfile)
@@ -90,26 +91,21 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3) and (len(mont_doc_freq[k]) > 2)}
 	print_to_csv(Montagnards, "Montagnards_counts.csv")
 
-	df = pd.DataFrame([Girondins, Montagnards])
-	df = df.transpose()
-	writer = pd.ExcelWriter('combined_frequency.xlsx')
-	df.to_excel(writer, 'Sheet1')
-	writer.save()
-
-	gir_frequency = process_excel("Girondins_frequency.xlsx")
-	mont_frequencey = process_excel("Montagnards_frequency.xlsx")
-	prior = process_excel("prior.xlsx")
+	print_to_excel(Girondins, Montagnards, 'combined_frequency.xlsx')
 
 	num_speeches = gir_num_speeches + mont_num_speeches
+	gir_tfidf = compute_tfidf(Girondins, num_speeches)
+	mont_tfidf = compute_tfidf(Montagnards, num_speeches)
 
-	compute_tfidf(Girondins, Montagnards, num_speeches)
+	#compute_distance(gir_tfidf, mont_tfidf)
+
+	print_to_csv(gir_tfidf, 'gir_tfidf.csv')
+	print_to_csv(mont_tfidf, 'mont_tfidf.csv')
+	print_to_excel(gir_tfidf, mont_tfidf, 'combined_tfidf.xlsx')
 	
-	computelogpostodds(gir_frequency, mont_frequencey, prior)
-
 	normalized = normalize_dicts(Girondins, Montagnards)
 	compute_distance(normalized[0], normalized[1])
 
-	print num_speeches
 
 def check_num_speakers(speech_data, speaker, party_dict):
 	for bigram in speech_data:
@@ -132,28 +128,6 @@ def process_excel(filename):
 		third[item] = int(third[item])
 	return(third)
 	
-	
-def computelogpostodds(dict1, dict2, prior):
-	sigmasquared = defaultdict(float)
-	sigma = defaultdict(float)
-	delta = defaultdict(float)
-
-	n1 = sum(dict1.values())
-	n2 = sum(dict2.values())
-	nprior = sum(prior.values())
-
-	for word in prior.keys():
-		l1 = float(dict1[word] + prior[word]) / ((n1 + nprior) - (dict1[word] + prior[word]))
-		l2 = float(dict2[word] + prior[word]) / ((n2 + nprior) - (dict2[word] + prior[word]))
-		sigmasquared[word] = 1/(float(dict1[word]) + float(prior[word])) + 1/(float(dict2[word]) + float(prior[word]))
-		sigma[word] = math.sqrt(sigmasquared[word])
-		delta[word] = (math.log(l1) - math.log(l2))/sigma[word]
-
-	writer = pd.ExcelWriter('log_post_odds.xlsx')
-	data = pd.DataFrame(delta.items())
-	data.to_excel(writer, "Sheet1")
-	writer.save()
-
 
 def compute_distance(Girondins, Montagnards):
 	diff_counter = {}
@@ -168,8 +142,8 @@ def compute_distance(Girondins, Montagnards):
 	for entry in diff_counter:
 		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
-	print("---------")
+	#print(euclidean_distance)
+	#print("---------")
 
 	## When every bigram accounted for
 	for bigram in Montagnards:
@@ -183,7 +157,7 @@ def compute_distance(Girondins, Montagnards):
 	for entry in Montagnards:
 		sum_of_squares = sum_of_squares + math.pow(Montagnards[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	print(euclidean_distance)
+	#print(euclidean_distance)
 
 def normalize_dicts(Girondins, Montagnards):
 	# Normalize counts
@@ -196,39 +170,23 @@ def normalize_dicts(Girondins, Montagnards):
 	for key in Montagnards:
 		Montagnards[key] = float(Montagnards[key])/all_sum
 
-	df = pd.DataFrame([Girondins, Montagnards])
-	df = df.transpose()
-	writer = pd.ExcelWriter('combined_normalized.xlsx')
-	df.to_excel(writer, 'Sheet1')
-	writer.save()
-
+	print_to_excel(Girondins, Montagnards, 'combined_normalized.xlsx')
 	print_to_csv(Girondins, "Girondins_counts_normalized.csv")
 	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")
+
 	return([Girondins, Montagnards])
 
 
-def compute_tfidf(Girondins, Montagnards, num_speeches):
-	gir_tfidf = {}
-	mont_tfidf = {}
-	for gram in Girondins:
-		idf = math.log10(num_speeches) - math.log10(doc_freq[gram])
-		tf = Girondins[gram]
-		gir_tfidf[gram] = (1+math.log10(tf+1))*idf
-	for gram in Montagnards:
-		idf = math.log10(num_speeches) - math.log10(doc_freq[gram])
-		tf = Montagnards[gram]
-		mont_tfidf[gram] = (1+math.log10(tf+1))*idf
+def compute_tfidf(dictionary, num_speeches):
+	tfidf = {}
+	for bigram in dictionary:
+		idf = math.log10(num_speeches) - math.log10(doc_freq[bigram])
+		tf = dictionary[bigram]
+		tfidf[bigram] = (1+math.log10(tf))*idf
 
-	compute_distance(gir_tfidf, mont_tfidf)
 
-	print_to_csv(gir_tfidf, 'gir_tfidf.csv')
-	print_to_csv(mont_tfidf, 'mont_tfidf.csv')
-
-	df = pd.DataFrame([gir_tfidf, mont_tfidf])
-	df = df.transpose()
-	writer = pd.ExcelWriter('combined_tfidf.xlsx')
-	df.to_excel(writer, 'Sheet1')
-	writer.save()
+	return tfidf
+	
 
 def print_to_csv(dictionary, filename):
 	output_file = filename
@@ -237,8 +195,12 @@ def print_to_csv(dictionary, filename):
 		for bigram, count in dictionary.items():
 			f.write('{}|{}\n'.format(bigram, count))
 
-
-
+def print_to_excel(dict1, dict2, filename):
+	df = pd.DataFrame([dict1, dict2])
+	df = df.transpose()
+	writer = pd.ExcelWriter(filename)
+	df.to_excel(writer, 'Sheet1')
+	writer.save()
 
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
