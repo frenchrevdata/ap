@@ -111,8 +111,8 @@ def findSpeeches(raw_speeches, daily_soup, date):
 				for i, name in enumerate(speaker_list['LastName']):
 					if (speaker.find(",") == -1) and (speaker.find(" et ") == -1):
 						if speaker.find(name) != -1 :
-							speakers_using_find.add(speaker + "\n")
 							speaker_name = speaker_list["FullName"].iloc[i]
+							speakers_using_find.add(speaker + " : " + remove_diacritic(speaker_name).decode('utf-8') + "\n")
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
