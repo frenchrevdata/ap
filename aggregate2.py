@@ -21,7 +21,8 @@ import math
 from collections import defaultdict
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
-doc_freq = defaultdict(lambda: 0)
+bigram_doc_freq = defaultdict(lambda: 0)
+unigram_doc_freq = defaultdict(lambda: 0)
 
 def remove_diacritic(input):
     '''
@@ -31,38 +32,82 @@ def remove_diacritic(input):
     return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
 
-def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins, Montagnards):
+def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches, speechid_to_speaker, Girondins, Montagnards):
 	speaker_names = set()
 	speakers_to_consider = []
-	gir_num_speeches = 0
-	mont_num_speeches = 0
+	train_total_freq_unigram = {}
+	test_total_freq_unigram = {}
+	train_total_freq_bigram = {}
+	test_total_freq_bigram = {}
+	train_number_speeches = 0
+	test_number_speeches = 0
 	# Keeps track of which speeches contain the given bigram
-	bigrams_speeches = collections.defaultdict()
-	gir_doc_freq = collections.defaultdict()
-	mont_doc_freq = collections.defaultdict()
-	speeches = collections.defaultdict(dict)
-	for speaker in speakers_to_analyze.index.values:
+	train_speeches_bigram = collections.defaultdict(dict)
+	test_speeches_bigram = collections.defaultdict(dict)
+	train_speeches_unigram = collections.defaultdict(dict)
+	test_speeches_unigram = collections.defaultdict(dict)
+	### Need to do all the following code for train and test
+	for speaker in speakers_to_analyze_train.index.values:
+		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
+	for speaker in speakers_to_analyze_test.index.values:
 		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
 	for speaker_name in speakers_to_consider:
 		print speaker_name
-		party = speakers_to_analyze.loc[speaker_name, "Party"]
+		if speaker_name in speakers_to_analyze_train.index.values:
+			party = speakers_to_analyze_train.loc[speaker_name, "Party"]
+		else:
+			party = speakers_to_analyze_test.loc[speaker_name, "Party"]
 		speech = Counter()
 		for identity in raw_speeches:
 			date = re.findall(date_regex, str(identity))[0]
 			if (date >= "1792-09-20") and (date <= "1793-06-02") and (speaker_name == speechid_to_speaker[identity]):
-				indv_speech_ngram = compute_ngrams(raw_speeches[identity])
-				for bigram in indv_speech_ngram:
-					if bigram in bigrams_speeches:
-						bigrams_speeches[bigram].append(identity)
-					else:
-						bigrams_speeches[bigram] = []
-						bigrams_speeches[bigram].append(identity)
-					if bigram in doc_freq:
-						doc_freq[bigram] = doc_freq[bigram] + 1
-					else:
-						doc_freq[bigram] = 1
+				indv_speech_bigram = compute_ngrams(raw_speeches[identity], 2)
+				indv_speech_unigram = compute_ngrams(raw_speeches[identity], 1)
+				if speaker_name in speakers_to_analyze_train.index.values:
+					train_number_speeches += 1
+					for bigram in indv_speech_bigram:
+						if bigram in bigram_doc_freq:
+							bigram_doc_freq[bigram] = bigram_doc_freq[bigram] + 1
+						else:
+							bigram_doc_freq[bigram] = 1
+						if bigram in train_total_freq_bigram:
+							train_total_freq_bigram[bigram] += 1
+						else:
+							train_total_freq_bigram[bigram] = 1
+					for unigram in indv_speech_unigram:
+						if unigram in unigram_doc_freq:
+							unigram_doc_freq[unigram] = unigram_doc_freq[unigram] + 1
+						else:
+							unigram_doc_freq[unigram] = 1
+						if unigram in train_total_freq_unigram:
+							train_total_freq_unigram[unigram] += 1
+						else:
+							train_total_freq_unigram[unigram] = 1
+					train_speeches_bigram[identity] = indv_speech_bigram
+					train_speeches_unigram[identity] = indv_speech_unigram
+				else:
+					test_number_speeches += 1
+					for bigram in indv_speech_bigram:
+						if bigram in bigram_doc_freq:
+							bigram_doc_freq[bigram] = bigram_doc_freq[bigram] + 1
+						else:
+							bigram_doc_freq[bigram] = 1
+						if bigram in test_total_freq_bigram:
+							test_total_freq_bigram[bigram] += 1
+						else:
+							test_total_freq_bigram[bigram] = 1
+					for unigram in indv_speech_unigram:
+						if unigram in unigram_doc_freq:
+							unigram_doc_freq[unigram] = unigram_doc_freq[unigram] + 1
+						else:
+							unigram_doc_freq[unigram] = 1
+						if unigram in test_total_freq_unigram:
+							test_total_freq_unigram[unigram] += 1
+						else:
+							test_total_freq_unigram[unigram] = 1
+					test_speeches_bigram[identity] = indv_speech_bigram
+					test_speeches_unigram[identity] = indv_speech_unigram
 
-				speeches[identity] = indv_speech_ngram
 				"""if party == "Girondins":
 					gir_num_speeches += 1
 					gir_doc_freq = check_num_speakers(indv_speech_ngram, speaker_name, gir_doc_freq)
@@ -83,18 +128,42 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 		with open(pickle_filename, 'wb') as handle:
 			pickle.dump(speech, handle, protocol = 0)"""
 
-	classification = pd.Series()
-	training_set = pd.DataFrame()
-	for speechid in speeches:
+	#NEED TO ADD CODE TO DO TRAINING AND TESTING SETS (import both excel files and do same computations)
+	# Do unigrams as well
+	classification = []
+	training_set = []
+	for speechid in train_speeches_bigram:
 		speaker = speechid_to_speaker[speechid]
-		if speakers_to_analyze.loc[speaker, "Party"] == "Girondins":
+		if speakers_to_analyze_train.loc[speaker, "Party"] == "Girondins":
 			classification.append(0)
 		else:
 			classification.append(1)
-		scores = compute_tfidf(dict(speeches[speechid]))
-		training_set = pd.DateFrame([training_set, scores])
-	print_to_csv(training_set, 'training_data.csv')
-
+		# add some doc freq cutoff here
+		bigram_input = {k:v for k,v in train_speeches_bigram[speechid].items() if (train_total_freq_bigram[k] >= 10)}
+		scores = compute_tfidf(bigram_input, train_number_speeches, "bigram")
+		training_set.append(scores)
+		#training_set = temp
+	for speechid in train_speeches_unigram:
+		speaker = speechid_to_speaker[speechid]
+		if speakers_to_analyze_train.loc[speaker, "Party"] == "Girondins":
+			classification.append(0)
+		else:
+			classification.append(1)
+		# add some doc freq cutoff here
+		unigram_input = {k:v for k,v in train_speeches_unigram[speechid].items() if (train_total_freq_unigram[k] >= 100)}
+		scores = compute_tfidf(unigram_input, train_number_speeches, "unigram")
+		training_set.append(scores)
+	#party = pd.Series(classification)
+	# loop through and count how many times each bigram appears, create new dataset that only has those bigrams
+	# x is train.values and y is classification to pass into classifier, scikitlearn svm xgboost
+	# key is to do feature engineering
+	# 10 fold CV, start low re: features then work high and see if the score gets better
+	train = pd.DataFrame(training_set)
+	writer = pd.ExcelWriter("training_set.xlsx")
+	train.to_excel(writer, 'Sheet1')
+	writer.save()
+	# columns should be bigrams
+	print train
 
 
 
@@ -117,8 +186,8 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	print_to_excel(Girondins, Montagnards, 'combined_frequency.xlsx')
 
 	num_speeches = gir_num_speeches + mont_num_speeches
-	gir_tfidf = compute_tfidf(Girondins, num_speeches)
-	mont_tfidf = compute_tfidf(Montagnards, num_speeches)
+	gir_tfidf = compute_tfidf(Girondins, num_speeches, "bigram")
+	mont_tfidf = compute_tfidf(Montagnards, num_speeches, "bigram")
 
 	#compute_distance(gir_tfidf, mont_tfidf)
 
@@ -201,8 +270,12 @@ def normalize_dicts(Girondins, Montagnards):
 	return([Girondins, Montagnards])
 
 
-def compute_tfidf(dictionary, num_speeches):
+def compute_tfidf(dictionary, num_speeches, order):
 	tfidf = {}
+	if order == "bigram":
+		doc_freq = bigram_doc_freq
+	else:
+		doc_freq = unigram_doc_freq
 	for bigram in dictionary:
 		idf = math.log10(num_speeches) - math.log10(doc_freq[bigram])
 		tf = dictionary[bigram]
@@ -240,11 +313,12 @@ if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
-    speakers_to_analyze = load_list("Modified Girondins and Montagnards.xlsx")
+    speakers_to_analyze_train = load_list("Modified Girondins and Montagnards.xlsx")
+    speakers_to_analyze_test = load_list("Girondins and Montagnards Test.xlsx")
     Girondins = Counter()
     Montagnards = Counter()
     try:
     	os.mkdir('../Speakers')
     except OSError:
     	pass
-    aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins, Montagnards)
+    aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches, speechid_to_speaker, Girondins, Montagnards)

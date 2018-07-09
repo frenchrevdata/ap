@@ -39,7 +39,7 @@ def remove_stopwords(input, stopwords):
 	return filtered_text
 
 
-def compute_ngrams(speech):
+def compute_ngrams(speech, order):
 	stopwords_from_file = open('FrenchStopwords.txt', 'r')
 	lines = stopwords_from_file.readlines()
 	french_stopwords = []
@@ -50,9 +50,9 @@ def compute_ngrams(speech):
 		word_to_append = remove_diacritic(unicode(word[0].replace("\n","").replace("\r",""), 'utf-8'))
 		french_stopwords.append(word_to_append)
 
-	speech = speech.replace("]"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("``"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
+	speech = speech.replace("]"," ").replace("[", " ").replace("&"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("\`"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
 	clean_text = remove_stopwords(speech.lower(), french_stopwords)
 	clean_text = clean_text.replace("mm secretaire", " ").replace("assemble nationale", " ").replace("monsieur president", " ").replace("convention nationale", " ").replace("archives parliamentaire", " ").replace("republique francaise", " ").replace("ordre jour", " ").replace("corps legislatif", " ")
-	n_grams = make_ngrams(clean_text, 2)
+	n_grams = make_ngrams(clean_text, order)
 	speech_ngrams = Counter(n_grams)
 	return(speech_ngrams)
