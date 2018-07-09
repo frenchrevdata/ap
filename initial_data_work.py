@@ -50,6 +50,7 @@ def parseFiles(raw_speeches):
         	filename = open('Docs/' + filename, "r")
         	contents = filename.read()
         	soup = BeautifulSoup(contents, 'lxml')
+        	
         	sessions = soup.find_all(['div2', 'div3'], {"type": ["session", "other"]})
         	#sessions.append(soup.find_all('div2', {"type": "other"}))
         	for session in sessions:
@@ -59,16 +60,16 @@ def parseFiles(raw_speeches):
 		        		date = date + "_soir"
 		        		if date in dates:
 		        			date = date + "2"
-		        			findSpeeches(raw_speeches, session, date)
+		        			findSpeeches(raw_speeches, session, date, filename)
 		        		else:
-		        			findSpeeches(raw_speeches, session, date)
+		        			findSpeeches(raw_speeches, session, date, filename)
 		        			dates.add(date)		        		
 		        	else:
-		        		findSpeeches(raw_speeches, session, date)
+		        		findSpeeches(raw_speeches, session, date, filename)
 		        		dates.add(date)
 	        filename.close()
 
-def findSpeeches(raw_speeches, daily_soup, date):
+def findSpeeches(raw_speeches, daily_soup, date, volno):
 	id_base = date.replace("/","_")
 	number_of_speeches = 0
 	for talk in daily_soup.find_all('sp'):
@@ -120,7 +121,7 @@ def findSpeeches(raw_speeches, daily_soup, date):
 			speechid_to_speaker[speech_id] = speaker_name
 			raw_speeches[speech_id] = full_speech
 		else:
-			names_not_caught.add(speaker + "\n")
+			names_not_caught.add(speaker + "; " + volno "\n")
 
 	speeches_per_day[id_base] = number_of_speeches
 
