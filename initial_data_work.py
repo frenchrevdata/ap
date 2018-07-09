@@ -23,6 +23,8 @@ import xlsxwriter
 #daily_regex = '(?:<p>[ ]{0,1}Séance)(?:[\s\S]+)(?:<p>[ ]{0,1}Séance)'
 #Seance followed by less than or equal to 4 line breaks (\n) then date value =
 daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
+page_regex = '(?:n=\"([A-Z0-9]+)" id="[a-z0-9_]+")\/>([\s\S]{1,9000})<pb '
+vol_regex = 'Docs\/(vol[0-9]{1,2}).xml'
 
 #raw_speeches = {}
 speechid_to_speaker = {}
@@ -48,11 +50,12 @@ def parseFiles(raw_speeches):
         if filename.endswith(".xml"):
         	print(filename)
         	filename = open('Docs/' + filename, "r")
+        	volno = re.findall(vol_regex, str(filename))[0]
         	contents = filename.read()
         	soup = BeautifulSoup(contents, 'lxml')
-        	
+        	pages = re.findall(page_regex, contents)
         	sessions = soup.find_all(['div2', 'div3'], {"type": ["session", "other"]})
-        	#sessions.append(soup.find_all('div2', {"type": "other"}))
+	    	#sessions.append(soup.find_all('div2', {"type": "other"}))
         	for session in sessions:
 		        date = extractDate(session)
 		        if (date >= "1789-05-05") and (date <= "1795-01-04") and (date != "error"):
@@ -60,12 +63,12 @@ def parseFiles(raw_speeches):
 		        		date = date + "_soir"
 		        		if date in dates:
 		        			date = date + "2"
-		        			findSpeeches(raw_speeches, session, date, filename)
+		        			findSpeeches(raw_speeches, session, date, volno)
 		        		else:
-		        			findSpeeches(raw_speeches, session, date, filename)
+		        			findSpeeches(raw_speeches, session, date, volno)
 		        			dates.add(date)		        		
 		        	else:
-		        		findSpeeches(raw_speeches, session, date, filename)
+		        		findSpeeches(raw_speeches, session, date, volno)
 		        		dates.add(date)
 	        filename.close()
 
@@ -113,7 +116,7 @@ def findSpeeches(raw_speeches, daily_soup, date, volno):
 					if (speaker.find(",") == -1) and (speaker.find(" et ") == -1):
 						if speaker.find(name) != -1 :
 							speaker_name = speaker_list["FullName"].iloc[i]
-							speakers_using_find.add(speaker + " : " + remove_diacritic(speaker_name).decode('utf-8') + "\n")
+							speakers_using_find.add(speaker + " : " + remove_diacritic(speaker_name).decode('utf-8') + "; " + str(volno) + "\n")
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
@@ -121,7 +124,7 @@ def findSpeeches(raw_speeches, daily_soup, date, volno):
 			speechid_to_speaker[speech_id] = speaker_name
 			raw_speeches[speech_id] = full_speech
 		else:
-			names_not_caught.add(speaker + "; " + volno "\n")
+			names_not_caught.add(speaker + "; " + str(volno) + "\n")
 
 	speeches_per_day[id_base] = number_of_speeches
 
