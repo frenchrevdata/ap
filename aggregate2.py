@@ -140,19 +140,27 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 			classification.append(1)
 		# add some doc freq cutoff here
 		bigram_input = {k:v for k,v in train_speeches_bigram[speechid].items() if (train_total_freq_bigram[k] >= 10)}
-		scores = compute_tfidf(bigram_input, train_number_speeches, "bigram")
-		training_set.append(scores)
-		#training_set = temp
-	for speechid in train_speeches_unigram:
+		unigram_input = {k:v for k,v in train_speeches_unigram[speechid].items() if (train_total_freq_unigram[k] >= 100)}
+		print unigram_input
+		bigram_scores = compute_tfidf(bigram_input, train_number_speeches, "bigram")
+		unigram_scores = compute_tfidf(unigram_input, train_number_speeches, "unigram")
+		merge_scores = bigram_scores.copy()
+		merge_scores.update(unigram_scores)
+		training_set.append(merge_scores)
+		### for if only doing bigrams
+		#training_set.append(bigram_scores)
+		### for if only doing unigrams
+		#training_set.append(unigram_scores)
+	"""for speechid in train_speeches_unigram:
 		speaker = speechid_to_speaker[speechid]
 		if speakers_to_analyze_train.loc[speaker, "Party"] == "Girondins":
 			classification.append(0)
 		else:
 			classification.append(1)
 		# add some doc freq cutoff here
-		unigram_input = {k:v for k,v in train_speeches_unigram[speechid].items() if (train_total_freq_unigram[k] >= 100)}
+		unigram_input = {k:v for k,v in train_speeches_unigram[speechid].items() if (train_total_freq_unigram[k] >= 80)}
 		scores = compute_tfidf(unigram_input, train_number_speeches, "unigram")
-		training_set.append(scores)
+		training_set.append(scores)"""
 	#party = pd.Series(classification)
 	# loop through and count how many times each bigram appears, create new dataset that only has those bigrams
 	# x is train.values and y is classification to pass into classifier, scikitlearn svm xgboost
