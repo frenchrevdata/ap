@@ -70,55 +70,31 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 				if speaker_name in speakers_to_analyze_train.index.values:
 					train_number_speeches += 1
 					for bigram in indv_speech_bigram:
-						if bigram in bigram_doc_freq:
-							bigram_doc_freq[bigram] = bigram_doc_freq[bigram] + 1
-						else:
-							bigram_doc_freq[bigram] = 1
-						if bigram in train_total_freq_bigram:
-							train_total_freq_bigram[bigram] += 1
-						else:
-							train_total_freq_bigram[bigram] = 1
+						augment(bigram_doc_freq, bigram)
+						augment(train_total_freq_bigram, bigram)
 						if bigram in bigrams_to_speeches:
 							bigrams_to_speeches[bigram].append(identity)
 						else:
 							bigrams_to_speeches[bigram] = []
 							bigrams_to_speeches[bigram].append(identity)
 					for unigram in indv_speech_unigram:
-						if unigram in unigram_doc_freq:
-							unigram_doc_freq[unigram] = unigram_doc_freq[unigram] + 1
-						else:
-							unigram_doc_freq[unigram] = 1
-						if unigram in train_total_freq_unigram:
-							train_total_freq_unigram[unigram] += 1
-						else:
-							train_total_freq_unigram[unigram] = 1
+						augment(unigram_doc_freq, unigram)
+						augment(train_total_freq_unigram, unigram)
 					train_speeches_bigram[identity] = indv_speech_bigram
 					train_speeches_unigram[identity] = indv_speech_unigram
 				else:
 					test_number_speeches += 1
 					for bigram in indv_speech_bigram:
-						if bigram in bigram_doc_freq:
-							bigram_doc_freq[bigram] = bigram_doc_freq[bigram] + 1
-						else:
-							bigram_doc_freq[bigram] = 1
-						if bigram in test_total_freq_bigram:
-							test_total_freq_bigram[bigram] += 1
-						else:
-							test_total_freq_bigram[bigram] = 1
+						augment(bigram_doc_freq, bigram)
+						augment(test_total_freq_bigram, bigram)
 						if bigram in bigrams_to_speeches:
 							bigrams_to_speeches[bigram].append(identity)
 						else:
 							bigrams_to_speeches[bigram] = []
 							bigrams_to_speeches[bigram].append(identity)
 					for unigram in indv_speech_unigram:
-						if unigram in unigram_doc_freq:
-							unigram_doc_freq[unigram] = unigram_doc_freq[unigram] + 1
-						else:
-							unigram_doc_freq[unigram] = 1
-						if unigram in test_total_freq_unigram:
-							test_total_freq_unigram[unigram] += 1
-						else:
-							test_total_freq_unigram[unigram] = 1
+						augment(unigram_doc_freq, unigram)
+						augment(test_total_freq_unigram, unigram)
 					test_speeches_bigram[identity] = indv_speech_bigram
 					test_speeches_unigram[identity] = indv_speech_unigram
 
@@ -145,12 +121,12 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 			pickle.dump(speech, handle, protocol = 0)"""
 		
 
-	run_train_classification(speechid_to_speaker, speakers_to_analyze_train, train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	model, train = run_train_classification(speechid_to_speaker, speakers_to_analyze_train, train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
 	
-	#run_test_classification(speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, test_number_speeches)
+	run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, test_number_speeches)
 
 	
-	with open('bigrams_to_speeches.csv', 'wb') as outfile:
+	"""with open('bigrams_to_speeches.csv', 'wb') as outfile:
 		writer = csv.writer(outfile)
 		for key, val in bigrams_to_speeches.items():
 			writer.writerow([key, val])
@@ -174,8 +150,14 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 	print_to_excel(gir_tfidf, mont_tfidf, 'combined_tfidf.xlsx')
 	
 	normalized = normalize_dicts(Girondins, Montagnards)
-	compute_distance(normalized[0], normalized[1])
+	compute_distance(normalized[0], normalized[1])"""
 
+
+def augment(dictionary, ngram):
+	if ngram in dictionary:
+		dictionary[ngram] = dictionary[ngram] + 1
+	else:
+		dictionary[ngram] = 1
 
 def check_num_speakers(speech_data, speaker, party_dict):
 	for bigram in speech_data:

@@ -17,8 +17,9 @@ import os
 import math
 from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
-from sklearn import metrics, cross_validation
+from sklearn import metrics, cross_validation, preprocessing
 from processing_functions import compute_tfidf
+from xgboost import XGBClassifier
 
 def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	train, train_classification = data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
@@ -27,15 +28,31 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	train.to_excel(writer, 'Sheet1')
 	writer.save()
 
+	### Logistic Regression
+	model = LogisticRegression()
+	model.fit(train.get_values(), train_classification)
+	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)
 
-	logreg = LogisticRegression()
-	logreg.fit(train.get_values(), train_classification)
-	predicted = cross_validation.cross_val_predict(LogisticRegression(), train.get_values(), train_classification, cv = 10)
+	"""### xgboost
+	model = XGBClassifier()
+	model.fit(train.get_values(), train_classification)
+	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
+
 	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
 
-def run_test_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+	return [model, train]
+	#return logreg
+
+def run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	test, test_classification = data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
-	print "Test CV Score: " + str(logreg.score(test.get_values(), test_classification))
+
+	"""test_pred = model.predict(test.get_values())
+	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
+
+	test = test[train.columns]
+
+	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
+
 
 def data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	classification = []
