@@ -38,17 +38,20 @@ def parseFiles():
 				if date.attrs:
 					coded_date = date['value']
 					year, month, day = re.findall(date_regex, coded_date)[0]
-					if date.string:
-						text_date = remove_diacritic(date.string).decode('utf-8')
-					else:
-						wrong_dates.add(coded_date + "; " + str(date.contents) + "; " + str(volno) + "\n")
+					child = date.findChildren()
+					if child:
+						child[0].extract()
+					text_date = date.get_text()
+					text_date = re.sub(r'([ ]{2,})', ' ', text_date)
+					text_date = remove_diacritic(text_date).decode('utf-8')
+					text_date = text_date.lower().replace('\n','')
 					try:
 						text_day, text_month, text_year = re.findall(text_regex, text_date)[0]
-						text_month = text_month.lower().replace(' (sic)','').replace('\n','').replace('\r','').replace(' ','')
+						text_month = text_month.replace(' (sic)','').replace('\n','').replace('\r','').replace(' ','')
+						text_date = remove_diacritic(text_month).decode('utf-8')
 						text_month = re.sub(r'([ ]{2,})', ' ', text_month)
 					except:
 						wrong_dates.add(coded_date + "; " + str(date.contents) + "; " + str(volno) + "\n")
-					#text_month = remove_diacritic(text_month).decode('utf-8')
 					try:
 						month_num = month_to_num[text_month]
 					except:
