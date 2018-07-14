@@ -40,8 +40,18 @@ def print_to_excel(dict1, dict2, filename):
 	writer.save()
 
 def load_list(speakernames):
-	pd_list = pd.read_excel(speakernames, sheet_name= 'Sheet1')
+	pd_list = pd.read_excel(speakernames, sheet_name = 'Sheet1')
 	pd_list = pd_list.set_index('Name')
+	speakers = pd_list.index.tolist()
+	for speaker in speakers:
+		ind = speakers.index(speaker)
+		speakers[ind] = remove_diacritic(speaker).decode('utf-8')
+	pd_list.index = speakers
+	return pd_list
+
+def load_speakerlist(speakernames):
+	pd_list = pd.read_excel(speakernames, sheet_name= 'AP Speaker Authority List xlsx')
+	pd_list = pd_list.set_index('Names')
 	speakers = pd_list.index.tolist()
 	for speaker in speakers:
 		ind = speakers.index(speaker)
@@ -64,24 +74,30 @@ def process_excel(filename):
 def compute_tfidf(dictionary, num_speeches, doc_freq):
 	tfidf = {}
 	for ngram in dictionary:
-		idf = math.log10(num_speeches) - math.log10(doc_freq[ngram])
+		if ngram in doc_freq:
+			df = doc_freq[ngram]
+		else:
+			df = 1
+		idf = math.log10(num_speeches) - math.log10(df)
 		tf = dictionary[ngram]
 		tfidf[ngram] = (1+math.log10(tf))*idf
 	return tfidf
 
-def normalize_dicts(Girondins, Montagnards):
+def normalize_dicts(first_dict, second_dict):
 	# Normalize counts
+	dict1 = first_dict
+	dict2 = second_dict
 	all_sum = 0
-	all_sum = all_sum + sum(Girondins.values()) + sum(Montagnards.values())
+	all_sum = all_sum + sum(dict1.values()) + sum(dict2.values())
 	
-	for key in Girondins:
-		Girondins[key] = float(Girondins[key])/all_sum
+	for key in dict1:
+		dict1[key] = float(dict1[key])/all_sum
 
-	for key in Montagnards:
-		Montagnards[key] = float(Montagnards[key])/all_sum
+	for key in dict2:
+		dict2[key] = float(dict2[key])/all_sum
 
-	print_to_excel(Girondins, Montagnards, 'combined_normalized.xlsx')
+	"""print_to_excel(Girondins, Montagnards, 'combined_normalized.xlsx')
 	print_to_csv(Girondins, "Girondins_counts_normalized.csv")
-	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")
+	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")"""
 
-	return([Girondins, Montagnards])
+	return([dict1, dict2])

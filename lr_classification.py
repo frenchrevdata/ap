@@ -18,12 +18,16 @@ import math
 from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics, cross_validation, preprocessing
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
 from processing_functions import compute_tfidf
 from xgboost import XGBClassifier
 
 def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
-	train, train_classification = data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	iteration = "train"
+	train, train_classification = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 	
+	### When train and test done separately
 	writer = pd.ExcelWriter("training_set.xlsx")
 	train.to_excel(writer, 'Sheet1')
 	writer.save()
@@ -38,25 +42,42 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	model.fit(train.get_values(), train_classification)
 	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
 
+
 	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
+	#print ("Test CV Score: " + str(model.score(x_test, y_test)))
+
 
 	return [model, train]
 	#return logreg
 
 def run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
-	test, test_classification = data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	iteration = "test"
+	test, test_classification = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
 
-	test = test[train.columns]
+	# Remove any columns not in the training set
+	for column in test.columns:
+		if column not in train.columns:
+			test = test.drop(column, axis = 1)
+
+	# Add columns of zero for features not in the test set but in the training set
+	for col in train.columns:
+		if col not in test.columns:
+			test[col] = 0
+
+
+	#test = test[train.columns]
 
 	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
-
-def data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+### If doing train and test separately
+def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	classification = []
 	data_set = []
+	### Should I do this once for all the data and then split it into test and train? That way all the data is based on the same bigrams. Or is that
+	### bad because then the training data is connected to the test data via the tfidf calculations?
 	for speechid in bigram_speeches:
 		speaker = speechid_to_speaker[speechid]
 		if speakers_to_analyze.loc[speaker, "Party"] == "Girondins":
@@ -64,11 +85,16 @@ def data_clean(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigra
 		else:
 			classification.append(1)
 		# add some doc freq cutoff here
-		bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 10)}
-		unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 55)}
-		
-		bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
-		unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
+		if iteration == "train":
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 10)}
+			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 55)}
+			
+			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
+			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
+		else:
+			bigram_scores = compute_tfidf(bigram_speeches[speechid], num_speeches, bigram_doc_freq)
+			unigram_scores = compute_tfidf(unigram_speeches[speechid], num_speeches, unigram_doc_freq)
+
 		
 		merge_scores = bigram_scores.copy()
 		merge_scores.update(unigram_scores)

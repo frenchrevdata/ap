@@ -85,7 +85,7 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 				else:
 					test_number_speeches += 1
 					for bigram in indv_speech_bigram:
-						augment(bigram_doc_freq, bigram)
+						#augment(bigram_doc_freq, bigram)
 						augment(test_total_freq_bigram, bigram)
 						if bigram in bigrams_to_speeches:
 							bigrams_to_speeches[bigram].append(identity)
@@ -93,7 +93,7 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 							bigrams_to_speeches[bigram] = []
 							bigrams_to_speeches[bigram].append(identity)
 					for unigram in indv_speech_unigram:
-						augment(unigram_doc_freq, unigram)
+						#augment(unigram_doc_freq, unigram)
 						augment(test_total_freq_unigram, unigram)
 					test_speeches_bigram[identity] = indv_speech_bigram
 					test_speeches_unigram[identity] = indv_speech_unigram
@@ -123,7 +123,7 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 
 	model, train = run_train_classification(speechid_to_speaker, speakers_to_analyze_train, train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
 	
-	run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, test_number_speeches)
+	run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
 
 	
 	"""with open('bigrams_to_speeches.csv', 'wb') as outfile:
