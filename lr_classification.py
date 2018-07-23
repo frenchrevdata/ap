@@ -25,12 +25,8 @@ from xgboost import XGBClassifier
 
 def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
-	train, train_classification = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
-	
-	### When train and test done separately
-	writer = pd.ExcelWriter("training_set.xlsx")
-	train.to_excel(writer, 'Sheet1')
-	writer.save()
+	train, train_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+
 
 	### Logistic Regression
 	model = LogisticRegression()
@@ -46,29 +42,71 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
 	#print ("Test CV Score: " + str(model.score(x_test, y_test)))
 
+	train_classification = pd.DataFrame(train_classification)
+	speeches = pd.DataFrame(speeches)
+	
+	train_total = pd.concat([train, train_classification, speeches])
+	writer = pd.ExcelWriter("training_data.xlsx")
+	train_total.to_excel(writer, 'Sheet1')
+	writer.save()
+
 
 	return [model, train]
 	#return logreg
 
 def run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "test"
-	test, test_classification = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	test, test_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
 
+
 	# Remove any columns not in the training set
+	cols_to_keep = []
 	for column in test.columns:
-		if column not in train.columns:
-			test = test.drop(column, axis = 1)
+		if column in train.columns:
+			cols_to_keep.append(column)
+	test = test[cols_to_keep]
 
 	# Add columns of zero for features not in the test set but in the training set
+	"""np.zeros
+	nrows is number rows in the DataFrame
+	ncols
+	convert to dataframe and pass in names of columns
+	concatenate to other dataframe"""
+
+	col_names = []
 	for col in train.columns:
 		if col not in test.columns:
 			test[col] = 0
+			#col_names.append(col)
 
+	"""numrows = test.shape[0]
+	numcols = len(col_names)
+	print col_names
+	zero_array = np.zeros((numrows, numcols))
+	zero_array = pd.DataFrame(zero_array, columns = col_names)
 
-	#test = test[train.columns]
+	#test.reset_index(drop = True)
+	test.append(zero_array, ignore_index = True)
+	
+	#test_mod = pd.concat([test, zero_array], ignore_index = True)
+
+	#test.merge(zero_array, right_index = True).reset_index()"""
+
+	test = test[train.columns]
+
+	#predict
+	#predict_prob
+
+	test_classification = pd.DataFrame(test_classification)
+	speeches = pd.DataFrame(speeches)
+
+	test_total = pd.concat([test, test_classification, speeches])
+	writer = pd.ExcelWriter("test_data.xlsx")
+	test_total.to_excel(writer, 'Sheet1')
+	writer.save()
 
 	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
@@ -76,17 +114,22 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	classification = []
 	data_set = []
+	speeches = []
 	### Should I do this once for all the data and then split it into test and train? That way all the data is based on the same bigrams. Or is that
 	### bad because then the training data is connected to the test data via the tfidf calculations?
 	for speechid in bigram_speeches:
 		speaker = speechid_to_speaker[speechid]
+
+		#create a vector of speechids in correct order to reverse engineer and check which speeches were/were not correctly classified
+		speeches.append(speechid)
+
 		if speakers_to_analyze.loc[speaker, "Party"] == "Girondins":
 			classification.append(0)
 		else:
 			classification.append(1)
 		# add some doc freq cutoff here
 		if iteration == "train":
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 10)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 7)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 55)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
@@ -104,4 +147,4 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 	data = pd.DataFrame(data_set)
 	data = data.fillna(0)
 
-	return([data, classification])
+	return([data, classification, speeches])
