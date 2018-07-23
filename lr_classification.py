@@ -27,6 +27,7 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	iteration = "train"
 	train, train_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
+	print len(train.columns)
 
 	### Logistic Regression
 	model = LogisticRegression()
@@ -45,7 +46,10 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	train_classification = pd.DataFrame(train_classification)
 	speeches = pd.DataFrame(speeches)
 	
-	train_total = pd.concat([train, train_classification, speeches])
+	"""train_total = train.copy()
+	train_total.join(train_classification)
+	train_total.join(speeches)"""
+	train_total = pd.concat([train, train_classification, speeches], axis = 1)
 	writer = pd.ExcelWriter("training_data.xlsx")
 	train_total.to_excel(writer, 'Sheet1')
 	writer.save()
@@ -97,18 +101,27 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 
 	test = test[train.columns]
 
-	#predict
-	#predict_prob
+	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
-	test_classification = pd.DataFrame(test_classification)
-	speeches = pd.DataFrame(speeches)
+	test_classification = pd.DataFrame(test_classification, columns = ['Real classification'])
+	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
 
-	test_total = pd.concat([test, test_classification, speeches])
+	predicted_values = pd.DataFrame(model.predict(test.get_values()), columns = ['Predicted'])
+	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
+	
+	real_pred = pd.concat([test_classification, predicted_values, predict_prob, speeches], axis = 1)
+	write_to = pd.ExcelWriter("predictions.xlsx")
+	real_pred.to_excel(write_to, 'Sheet1')
+	write_to.save()
+
+	
+	#test.join(test_classification)
+	#test.join(speeches)
+	test_total = pd.concat([test, test_classification, speeches], axis = 1)
 	writer = pd.ExcelWriter("test_data.xlsx")
+	#test_total.to_excel(writer, 'Sheet1')
 	test_total.to_excel(writer, 'Sheet1')
 	writer.save()
-
-	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
 ### If doing train and test separately
 def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
@@ -129,8 +142,8 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 			classification.append(1)
 		# add some doc freq cutoff here
 		if iteration == "train":
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 7)}
-			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 55)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 8)}
+			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 52)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
 			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
