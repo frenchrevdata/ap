@@ -123,8 +123,17 @@ def aggregate(speakers_to_analyze_train, speakers_to_analyze_test, raw_speeches,
 
 	model, train = run_train_classification(speechid_to_speaker, speakers_to_analyze_train, train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
 	
-	run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	real_pred = run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	
+	real_pred = pd.concat([real_pred, pd.DataFrame(columns = ['Speech Text'])])
 
+	for i, index in enumerate(real_pred.index.values):
+		if real_pred['Real classification'].iloc[i] != real_pred['Predicted'].iloc[i]:
+			real_pred['Speech Text'].iloc[i] = raw_speeches[real_pred['Speechid'].iloc[i]]
+
+	write_to = pd.ExcelWriter("predictions_with_speeches.xlsx")
+	real_pred.to_excel(write_to, 'Sheet1')
+	write_to.save()
 	
 	"""with open('bigrams_to_speeches.csv', 'wb') as outfile:
 		writer = csv.writer(outfile)

@@ -27,7 +27,15 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	iteration = "train"
 	train, train_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
-	print len(train.columns)
+	### Remove procedural and other generic language
+	train.columns = train.columns.map(str)
+
+	columns_to_drop = ["(u'salut',)", "(u'veux',)", "(u'``',)", "(u'voici',)", "(u'surtout',)", "(u'sais',)", "(u'quil',)", "(u'pu',)", "(u'peut-etre',)", "(u'lui-meme',)", "(u'lesquels',)", "(u'elle-meme',)", "(u'ae',)"]
+	"""for column in columns_to_drop:
+		test.drop(column, axis = 1)"""
+
+	train = train.drop(columns = columns_to_drop, axis = 1)
+
 
 	### Logistic Regression
 	model = LogisticRegression()
@@ -44,7 +52,7 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	#print ("Test CV Score: " + str(model.score(x_test, y_test)))
 
 	train_classification = pd.DataFrame(train_classification)
-	speeches = pd.DataFrame(speeches)
+	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
 	
 	"""train_total = train.copy()
 	train_total.join(train_classification)
@@ -65,6 +73,8 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
 
+
+	test.columns = test.columns.map(str)
 
 	# Remove any columns not in the training set
 	cols_to_keep = []
@@ -103,13 +113,18 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 
 	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
-	test_classification = pd.DataFrame(test_classification, columns = ['Real classification'])
+	test_classification_df = pd.DataFrame(test_classification, columns = ['Real classification'])
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
 
-	predicted_values = pd.DataFrame(model.predict(test.get_values()), columns = ['Predicted'])
+	predictions = model.predict(test.get_values())
+	predicted_values = pd.DataFrame(predictions, columns = ['Predicted'])
+
+	print confusion_matrix(test_classification, predicted_values)
+
 	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
 	
-	real_pred = pd.concat([test_classification, predicted_values, predict_prob, speeches], axis = 1)
+	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches], axis = 1)
+
 	write_to = pd.ExcelWriter("predictions.xlsx")
 	real_pred.to_excel(write_to, 'Sheet1')
 	write_to.save()
@@ -117,11 +132,13 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	
 	#test.join(test_classification)
 	#test.join(speeches)
-	test_total = pd.concat([test, test_classification, speeches], axis = 1)
+	test_total = pd.concat([test, test_classification_df, speeches], axis = 1)
 	writer = pd.ExcelWriter("test_data.xlsx")
 	#test_total.to_excel(writer, 'Sheet1')
 	test_total.to_excel(writer, 'Sheet1')
 	writer.save()
+
+	return real_pred
 
 ### If doing train and test separately
 def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
