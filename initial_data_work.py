@@ -17,6 +17,7 @@ import os
 import gzip
 from make_ngrams import compute_ngrams
 import xlsxwriter
+from processing_functions import remove_diacritic
 
 
 
@@ -33,14 +34,6 @@ speeches_per_day = {}
 speakers_using_find = set()
 global speaker_list
 
-
-
-def remove_diacritic(input):
-    '''
-    Accept a unicode string, and return a normal string (bytes in Python 3)
-    without any diacritical marks.
-    '''
-    return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
 
 def parseFiles(raw_speeches):
@@ -116,7 +109,7 @@ def findSpeeches(raw_speeches, daily_soup, date, volno):
 					if (speaker.find(",") == -1) and (speaker.find(" et ") == -1):
 						if speaker.find(name) != -1 :
 							speaker_name = speaker_list["FullName"].iloc[i]
-							speakers_using_find.add(speaker + " : " + remove_diacritic(speaker_name).decode('utf-8') + "; " + str(volno) + "\n")
+							speakers_using_find.add(speaker + " : " + remove_diacritic(speaker_name).decode('utf-8') + "; " + str(volno) + "; " + str(date) + "\n")
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
@@ -124,7 +117,7 @@ def findSpeeches(raw_speeches, daily_soup, date, volno):
 			speechid_to_speaker[speech_id] = speaker_name
 			raw_speeches[speech_id] = full_speech
 		else:
-			names_not_caught.add(speaker + "; " + str(volno) + "\n")
+			names_not_caught.add(speaker + "; " + str(volno) + "; " + str(date) + "\n")
 
 	speeches_per_day[id_base] = number_of_speeches
 
@@ -158,7 +151,7 @@ def extractDate(soup_file):
 
 if __name__ == '__main__':
     import sys
-    speaker_list = load_speakerlist('Copy of AP_Speaker_Authority_List_Edited_2.xlsx')
+    speaker_list = load_speakerlist('Copy of AP_Speaker_Authority_List_Edited_3.xlsx')
     raw_speeches = {}
     parseFiles(raw_speeches)
     txtfile = open("names_not_caught.txt", 'w')

@@ -47,8 +47,8 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 		speech = Counter()
 		for identity in raw_speeches:
 			date = re.findall(date_regex, str(identity))[0]
-			if (date >= "1792-09-20") and (speaker_name == speechid_to_speaker[identity]):
-				indv_speech_ngram = compute_ngrams(raw_speeches[identity])
+			if (date >= "1792-09-20") and (date <= "1793-06-02") and (speaker_name == speechid_to_speaker[identity]):
+				indv_speech_ngram = compute_ngrams(raw_speeches[identity], 2)
 				for bigram in indv_speech_ngram:
 					if bigram in bigrams_speeches:
 						bigrams_speeches[bigram].append(identity)
@@ -73,11 +73,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 						Montagnards = Montagnards + indv_speech_ngram
 					except NameError:
 						Montagnards = indv_speech_ngram
-				#speech = speech + indv_speech_ngram
-		#speaker_ngrams = compute_ngrams(speech)
-		"""pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
+				speech = speech + indv_speech_ngram
+		#speaker_ngrams = compute_ngrams(speech, 2)
+		pickle_filename = "../Speakers/" + speaker_name + "_ngrams.pickle"
 		with open(pickle_filename, 'wb') as handle:
-			pickle.dump(speech, handle, protocol = 0)"""
+			pickle.dump(speech, handle, protocol = 0)
 
 
 	with open('bigrams_to_speeches.csv', 'wb') as outfile:
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
-    speakers_to_analyze = load_list("Copy of Girondins and Montagnards.xlsx")
+    speakers_to_analyze = load_list("Girondins and Montagnards New.xlsx")
     Girondins = Counter()
     Montagnards = Counter()
     try:
