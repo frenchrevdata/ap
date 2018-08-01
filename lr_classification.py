@@ -25,16 +25,18 @@ from xgboost import XGBClassifier
 
 def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
-	train, train_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	train, train_classification, speeches, speakers = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
-	### Remove procedural and other generic language
+	"""### Remove procedural and other generic language
 	train.columns = train.columns.map(str)
 
 	columns_to_drop = ["(u'salut',)", "(u'veux',)", "(u'``',)", "(u'voici',)", "(u'surtout',)", "(u'sais',)", "(u'quil',)", "(u'pu',)", "(u'peut-etre',)", "(u'lui-meme',)", "(u'lesquels',)", "(u'elle-meme',)", "(u'ae',)"]
-	"""for column in columns_to_drop:
-		test.drop(column, axis = 1)"""
+	for column in columns_to_drop:
+		test.drop(column, axis = 1)
 
-	train = train.drop(columns = columns_to_drop, axis = 1)
+	train = train.drop(columns = columns_to_drop, axis = 1)"""
+
+	print len(train.index)
 
 
 	### Logistic Regression
@@ -53,11 +55,12 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 
 	train_classification = pd.DataFrame(train_classification)
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
+	speakers = pd.DataFrame(speakers, columns = ['Speaker'])
 	
 	"""train_total = train.copy()
 	train_total.join(train_classification)
 	train_total.join(speeches)"""
-	train_total = pd.concat([train, train_classification, speeches], axis = 1)
+	train_total = pd.concat([train, train_classification, speeches, speakers], axis = 1)
 	writer = pd.ExcelWriter("training_data.xlsx")
 	train_total.to_excel(writer, 'Sheet1')
 	writer.save()
@@ -68,13 +71,14 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 
 def run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "test"
-	test, test_classification, speeches = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	test, test_classification, speeches, speakers = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
 
 
-	test.columns = test.columns.map(str)
+	#test.columns = test.columns.map(str)
+	print len(test.index)
 
 	# Remove any columns not in the training set
 	cols_to_keep = []
@@ -115,6 +119,7 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 
 	test_classification_df = pd.DataFrame(test_classification, columns = ['Real classification'])
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
+	speakers = pd.DataFrame(speakers, columns = ['Speaker'])
 
 	predictions = model.predict(test.get_values())
 	predicted_values = pd.DataFrame(predictions, columns = ['Predicted'])
@@ -123,7 +128,7 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 
 	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
 	
-	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches], axis = 1)
+	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches, speakers], axis = 1)
 
 	write_to = pd.ExcelWriter("predictions.xlsx")
 	real_pred.to_excel(write_to, 'Sheet1')
@@ -132,7 +137,7 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	
 	#test.join(test_classification)
 	#test.join(speeches)
-	test_total = pd.concat([test, test_classification_df, speeches], axis = 1)
+	test_total = pd.concat([test, test_classification_df, speeches, speakers], axis = 1)
 	writer = pd.ExcelWriter("test_data.xlsx")
 	#test_total.to_excel(writer, 'Sheet1')
 	test_total.to_excel(writer, 'Sheet1')
@@ -145,6 +150,7 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 	classification = []
 	data_set = []
 	speeches = []
+	speakers = []
 	### Should I do this once for all the data and then split it into test and train? That way all the data is based on the same bigrams. Or is that
 	### bad because then the training data is connected to the test data via the tfidf calculations?
 	for speechid in bigram_speeches:
@@ -152,6 +158,7 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 
 		#create a vector of speechids in correct order to reverse engineer and check which speeches were/were not correctly classified
 		speeches.append(speechid)
+		speakers.append(speaker)
 
 		if speakers_to_analyze.loc[speaker, "Party"] == "Girondins":
 			classification.append(0)
@@ -159,8 +166,8 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 			classification.append(1)
 		# add some doc freq cutoff here
 		if iteration == "train":
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 8)}
-			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 52)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 7)}
+			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 50)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
 			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
@@ -177,4 +184,4 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 	data = pd.DataFrame(data_set)
 	data = data.fillna(0)
 
-	return([data, classification, speeches])
+	return([data, classification, speeches, speakers])
