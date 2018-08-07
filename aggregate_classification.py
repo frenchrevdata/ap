@@ -20,11 +20,11 @@ from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics, cross_validation
 from processing_functions import print_to_csv, print_to_excel, load_list, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
-from lr_classification import run_train_classification, run_test_classification
+#from lr_classification import run_train_classification, run_test_classification
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
-bigram_doc_freq = defaultdict(lambda: 0)
-unigram_doc_freq = defaultdict(lambda: 0)
+#bigram_doc_freq = defaultdict(lambda: 0)
+#unigram_doc_freq = defaultdict(lambda: 0)
 
 
 def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins, Montagnards):
@@ -44,6 +44,8 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	test_speeches_unigram = collections.defaultdict(dict)
 
 	bigrams_to_speeches = collections.defaultdict()
+	bigram_doc_freq = collections.defaultdict()
+	unigram_doc_freq = collections.defaultdict()
 
 	gir_num_speeches = 0
 	mont_num_speeches = 0
@@ -126,12 +128,54 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 			with open(pickle_filename, 'wb') as handle:
 				pickle.dump(speech, handle, protocol = 0)"""
 		
+	print train_number_speeches
+	print test_number_speeches
+	with open("speechid_to_speaker_store.pickle", 'wb') as handle:
+		pickle.dump(speechid_to_speaker, handle, protocol = 0)
+	speechid_to_speaker = None
+	with open("speakers_to_analyze_store.pickle", 'wb') as handle:
+		pickle.dump(speakers_to_analyze, handle, protocol = 0)
+	speakers_to_analyze = None
+	raw_speeches = None
 
-	model, train = run_train_classification(speechid_to_speaker, speakers_to_analyze_train, train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	with open("train_speeches_bigram.pickle", 'wb') as handle:
+		pickle.dump(train_speeches_bigram, handle, protocol = 0)
+	with open("train_speeches_unigram.pickle", 'wb') as handle:
+		pickle.dump(train_speeches_unigram, handle, protocol = 0)
+	with open("train_total_freq_bigram.pickle", 'wb') as handle:
+		pickle.dump(train_total_freq_bigram, handle, protocol = 0)
+	with open("train_total_freq_unigram.pickle", 'wb') as handle:
+		pickle.dump(train_total_freq_unigram, handle, protocol = 0)
 	
-	real_pred = run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze_test, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	with open("bigram_doc_freq.pickle", 'wb') as handle:
+		pickle.dump(bigram_doc_freq, handle, protocol = 0)
+	with open("unigram_doc_freq.pickle", 'wb') as handle:
+		pickle.dump(unigram_doc_freq, handle, protocol = 0)
+	with open("train_number_speeches.pickle", 'wb') as handle:
+		pickle.dump(train_number_speeches, handle, protocol = 0)
+
+	with open("test_speeches_bigram.pickle", 'wb') as handle:
+		pickle.dump(test_speeches_bigram, handle, protocol = 0)
+	with open("test_speeches_unigram.pickle", 'wb') as handle:
+		pickle.dump(test_speeches_unigram, handle, protocol = 0)
+	with open("test_total_freq_bigram.pickle", 'wb') as handle:
+		pickle.dump(test_total_freq_bigram, handle, protocol = 0)
+	with open("test_total_freq_unigram.pickle", 'wb') as handle:
+		pickle.dump(test_total_freq_unigram, handle, protocol = 0)
+
+
+	"""model, train_columns = run_train_classification(train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+	
+	train_speeches_bigram = None
+	train_speeches_unigram = None
+	train_total_freq_unigram = None
+	train_total_freq_bigram = None
+
+	real_pred = run_test_classification(model, train_columns, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
 	
 	real_pred = pd.concat([real_pred, pd.DataFrame(columns = ['Speech Text'])])
+
+	raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
 
 	for i, index in enumerate(real_pred.index.values):
 		if real_pred['Real classification'].iloc[i] != real_pred['Predicted'].iloc[i]:
@@ -139,7 +183,7 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 
 	write_to = pd.ExcelWriter("predictions_with_speeches.xlsx")
 	real_pred.to_excel(write_to, 'Sheet1')
-	write_to.save()
+	write_to.save()"""
 	
 	"""with open('bigrams_to_speeches.csv', 'wb') as outfile:
 		writer = csv.writer(outfile)
@@ -184,7 +228,7 @@ def check_num_speakers(speech_data, speaker, party_dict):
 	return party_dict
 	
 
-def compute_distance(Girondins, Montagnards):
+"""def compute_distance(Girondins, Montagnards):
 	diff_counter = {}
 	
 	# Compute the Euclidean distance between the two vectors
@@ -213,7 +257,7 @@ def compute_distance(Girondins, Montagnards):
 	for entry in diff_counter:
 		sum_of_squares = sum_of_squares + math.pow(diff_counter[entry], 2)
 	euclidean_distance = math.sqrt(sum_of_squares)
-	#print(euclidean_distance)
+	#print(euclidean_distance)"""
 
 
 if __name__ == '__main__':

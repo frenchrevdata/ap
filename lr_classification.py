@@ -23,9 +23,9 @@ from sklearn.model_selection import train_test_split
 from processing_functions import compute_tfidf
 from xgboost import XGBClassifier
 
-def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
-	train, train_classification, speeches, speakers = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	train, train_classification, speeches, speakers = data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""### Remove procedural and other generic language
 	train.columns = train.columns.map(str)
@@ -65,13 +65,23 @@ def run_train_classification(speechid_to_speaker, speakers_to_analyze, bigram_sp
 	train_total.to_excel(writer, 'Sheet1')
 	writer.save()
 
+	train_classification = None
+	speeches = None
+	speakers = None
+	train_total = None
+	columns_to_return = train.columns
+	train = None
 
-	return [model, train]
+
+	return [model, columns_to_return]
 	#return logreg
 
-def run_test_classification(model, train, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+def run_test_classification(model, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "test"
-	test, test_classification, speeches, speakers = data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+
+	print "check2"
+
+	test, test_classification, speeches, speakers = data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
@@ -83,9 +93,11 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	# Remove any columns not in the training set
 	cols_to_keep = []
 	for column in test.columns:
-		if column in train.columns:
+		if column in train_columns:
 			cols_to_keep.append(column)
 	test = test[cols_to_keep]
+	cols_to_keep = None
+
 
 	# Add columns of zero for features not in the test set but in the training set
 	"""np.zeros
@@ -95,25 +107,26 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	concatenate to other dataframe"""
 
 	col_names = []
-	for col in train.columns:
+	for col in train_columns:
 		if col not in test.columns:
-			test[col] = 0
-			#col_names.append(col)
+			#test[col] = 0
+			col_names.append(col)
 
-	"""numrows = test.shape[0]
+	numrows = test.shape[0]
 	numcols = len(col_names)
 	print col_names
 	zero_array = np.zeros((numrows, numcols))
 	zero_array = pd.DataFrame(zero_array, columns = col_names)
 
 	#test.reset_index(drop = True)
-	test.append(zero_array, ignore_index = True)
+	test = pd.concat([test, zero_array], axis = 1, ignore_index = True)
+	#test.append(zero_array, ignore_index = True)
 	
 	#test_mod = pd.concat([test, zero_array], ignore_index = True)
 
 	#test.merge(zero_array, right_index = True).reset_index()"""
 
-	test = test[train.columns]
+	test = test[train_columns]
 
 	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
@@ -146,13 +159,18 @@ def run_test_classification(model, train, speechid_to_speaker, speakers_to_analy
 	return real_pred
 
 ### If doing train and test separately
-def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+def data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
+	print "check3"
 	classification = []
 	data_set = []
 	speeches = []
 	speakers = []
+
+	speechid_to_speaker = pickle.load(open("speechid_to_speaker_store.pickle", "rb"))
+	speakers_to_analyze = pickle.load(open("speakers_to_analyze_store.pickle", "rb"))
 	### Should I do this once for all the data and then split it into test and train? That way all the data is based on the same bigrams. Or is that
 	### bad because then the training data is connected to the test data via the tfidf calculations?
+	print len(bigram_speeches)
 	for speechid in bigram_speeches:
 		speaker = speechid_to_speaker[speechid]
 
@@ -166,7 +184,7 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 			classification.append(1)
 		# add some doc freq cutoff here
 		if iteration == "train":
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 7)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 8)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 50)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
@@ -181,7 +199,68 @@ def data_clean(iteration, speechid_to_speaker, speakers_to_analyze, bigram_speec
 		
 		data_set.append(merge_scores)
 
-	data = pd.DataFrame(data_set)
+
+	speechid_to_speaker = None
+	speakers_to_analyze = None
+	bigram_speeches = None
+	unigram_speeches = None
+	bigram_input = None
+	unigram_input = None
+	bigram_scores = None
+	unigram_scores = None
+
+	if iteration == "train":
+		data = pd.DataFrame(data_set)
+	else:
+		total = len(data_set)
+		data_first_third = pd.DataFrame(data_set[:total/3])
+		print len(data_first_third)
+		data_middle_third = pd.DataFrame(data_set[total/3:(2*total)/3])
+		print len(data_middle_third)
+		data_last_third = pd.DataFrame(data_set[(2*total)/3:])
+		print len(data_last_third)
+		data = pd.concat([data_first_third, data_middle_third, data_last_third], axis = 1)
+	data_set = None
 	data = data.fillna(0)
 
+
 	return([data, classification, speeches, speakers])
+
+if __name__ == '__main__':
+	import sys
+	train_speeches_bigram = pickle.load(open("train_speeches_bigram.pickle", "rb"))
+	train_speeches_unigram = pickle.load(open("train_speeches_unigram.pickle", "rb"))
+	train_total_freq_bigram = pickle.load(open("train_total_freq_bigram.pickle", "rb"))
+	train_total_freq_unigram = pickle.load(open("train_total_freq_unigram.pickle", "rb"))
+	bigram_doc_freq = pickle.load(open("bigram_doc_freq.pickle", "rb"))
+	unigram_doc_freq = pickle.load(open("unigram_doc_freq.pickle", "rb"))
+	train_number_speeches = pickle.load(open("train_number_speeches.pickle", "rb"))
+
+
+	model, train_columns = run_train_classification(train_speeches_bigram, train_speeches_unigram, train_total_freq_bigram, train_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+
+	train_speeches_bigram = None
+	train_speeches_unigram = None
+	train_total_freq_bigram = None
+	train_total_freq_unigram = None
+
+
+	test_total_freq_bigram = pickle.load(open("test_total_freq_bigram.pickle", "rb"))
+	test_total_freq_unigram = pickle.load(open("test_total_freq_unigram.pickle", "rb"))
+	test_speeches_bigram = pickle.load(open("test_speeches_bigram.pickle", "rb"))
+	test_speeches_unigram = pickle.load(open("test_speeches_unigram.pickle", "rb"))
+
+
+	real_pred = run_test_classification(model, train_columns, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+
+	real_pred = pd.concat([real_pred, pd.DataFrame(columns = ['Speech Text'])])
+
+	raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
+
+	for i, index in enumerate(real_pred.index.values):
+		if real_pred['Real classification'].iloc[i] != real_pred['Predicted'].iloc[i]:
+			real_pred['Speech Text'].iloc[i] = raw_speeches[real_pred['Speechid'].iloc[i]]
+
+	write_to = pd.ExcelWriter("predictions_with_speeches.xlsx")
+	real_pred.to_excel(write_to, 'Sheet1')
+	write_to.save()

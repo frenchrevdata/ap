@@ -13,17 +13,8 @@ from nltk import word_tokenize
 from nltk.util import ngrams
 import collections
 from collections import Counter
-import os
 import gzip
-
-
-
-def remove_diacritic(input):
-    '''
-    Accept a unicode string, and return a normal string (bytes in Python 3)
-    without any diacritical marks.
-    '''
-    return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
+from processing_functions import remove_diacritic
 
 def make_ngrams(input, amount):
 	token = word_tokenize(input)
@@ -50,7 +41,7 @@ def compute_ngrams(speech, order):
 		word_to_append = remove_diacritic(unicode(word[0].replace("\n","").replace("\r",""), 'utf-8'))
 		french_stopwords.append(word_to_append)
 
-	speech = speech.replace("]"," ").replace("[", " ").replace("&"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("\`"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
+	speech = speech.replace("]"," ").replace("[", " ").replace("{"," ").replace("}", " ").replace("&"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("\`"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
 	clean_text = remove_stopwords(speech.lower(), french_stopwords)
 	clean_text = clean_text.replace("mm secretaire", " ").replace("assemble nationale", " ").replace("monsieur president", " ").replace("convention nationale", " ").replace("archives parliamentaire", " ").replace("republique francaise", " ").replace("ordre jour", " ").replace("corps legislatif", " ")
 	n_grams = make_ngrams(clean_text, order)
