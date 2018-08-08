@@ -39,15 +39,15 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 	train = train.drop(columns = columns_to_drop, axis = 1)"""
 
 
-	### Logistic Regression
+	"""### Logistic Regression
 	model = LogisticRegression()
 	model.fit(train.get_values(), train_classification)
-	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)
+	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
 
-	"""### xgboost
+	### xgboost
 	model = XGBClassifier()
 	model.fit(train.get_values(), train_classification)
-	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
+	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)
 
 
 	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
@@ -188,7 +188,7 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 			# 14 and 62, 0.635, 1580 features
 			# 14 and 64, 0.623,	1550 features
 			# 15 and 62, 0.6298,1502 features
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 14)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 15)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 62)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
