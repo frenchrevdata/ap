@@ -23,9 +23,11 @@ from sklearn.model_selection import train_test_split
 from processing_functions import compute_tfidf
 from xgboost import XGBClassifier
 
+train_cols = []
+
 def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
-	train, train_classification, speeches, speakers = data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	train, train_classification, speeches, speakers = data_clean(iteration, None, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""### Remove procedural and other generic language
 	train.columns = train.columns.map(str)
@@ -35,8 +37,6 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 		test.drop(column, axis = 1)
 
 	train = train.drop(columns = columns_to_drop, axis = 1)"""
-
-	print len(train.index)
 
 
 	### Logistic Regression
@@ -79,24 +79,23 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 def run_test_classification(model, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "test"
 
-	print "check2"
 
-	test, test_classification, speeches, speakers = data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
+	test, test_classification, speeches, speakers = data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
 	"""test_pred = model.predict(test.get_values())
 	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
 
 
 	#test.columns = test.columns.map(str)
-	print len(test.index)
 
 	# Remove any columns not in the training set
-	cols_to_keep = []
+	"""cols_to_keep = []
 	for column in test.columns:
 		if column in train_columns:
 			cols_to_keep.append(column)
+	print cols_to_keep
 	test = test[cols_to_keep]
-	cols_to_keep = None
+	cols_to_keep = None"""
 
 
 	# Add columns of zero for features not in the test set but in the training set
@@ -109,12 +108,12 @@ def run_test_classification(model, train_columns, bigram_speeches, unigram_speec
 	col_names = []
 	for col in train_columns:
 		if col not in test.columns:
-			#test[col] = 0
+			test[col] = 0
 			col_names.append(col)
+	#print len(test.columns)
 
-	numrows = test.shape[0]
+	"""numrows = test.shape[0]
 	numcols = len(col_names)
-	print col_names
 	zero_array = np.zeros((numrows, numcols))
 	zero_array = pd.DataFrame(zero_array, columns = col_names)
 
@@ -159,8 +158,7 @@ def run_test_classification(model, train_columns, bigram_speeches, unigram_speec
 	return real_pred
 
 ### If doing train and test separately
-def data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
-	print "check3"
+def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	classification = []
 	data_set = []
 	speeches = []
@@ -170,7 +168,6 @@ def data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigra
 	speakers_to_analyze = pickle.load(open("speakers_to_analyze_store.pickle", "rb"))
 	### Should I do this once for all the data and then split it into test and train? That way all the data is based on the same bigrams. Or is that
 	### bad because then the training data is connected to the test data via the tfidf calculations?
-	print len(bigram_speeches)
 	for speechid in bigram_speeches:
 		speaker = speechid_to_speaker[speechid]
 
@@ -184,20 +181,35 @@ def data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigra
 			classification.append(1)
 		# add some doc freq cutoff here
 		if iteration == "train":
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 8)}
-			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 50)}
+			# 9 and 60 is best, 0.643, 2396 features
+			# 10 and 60, 0.635, 2183 features
+			# 13 and 60, 0.634, 1740 features
+			# 14 and 60, 0.633, 1617 features
+			# 14 and 62, 0.635, 1580 features
+			# 14 and 64, 0.623,	1550 features
+			# 15 and 62, 0.6298,1502 features
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 14)}
+			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 62)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
 			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
 		else:
-			bigram_scores = compute_tfidf(bigram_speeches[speechid], num_speeches, bigram_doc_freq)
-			unigram_scores = compute_tfidf(unigram_speeches[speechid], num_speeches, unigram_doc_freq)
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (k in train_columns)}
+			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (k in train_columns)}
+			
+			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
+			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
+			
+			"""bigram_scores = compute_tfidf(bigram_speeches[speechid], num_speeches, bigram_doc_freq)
+			unigram_scores = compute_tfidf(unigram_speeches[speechid], num_speeches, unigram_doc_freq)"""
 
 		
 		merge_scores = bigram_scores.copy()
 		merge_scores.update(unigram_scores)
 		
 		data_set.append(merge_scores)
+
+		#data_set.append(bigram_scores)
 
 
 	speechid_to_speaker = None
@@ -212,14 +224,16 @@ def data_clean(iteration, bigram_speeches, unigram_speeches, bigram_freq, unigra
 	if iteration == "train":
 		data = pd.DataFrame(data_set)
 	else:
-		total = len(data_set)
+		data = pd.DataFrame(data_set)
+		"""total = len(data_set)
 		data_first_third = pd.DataFrame(data_set[:total/3])
 		print len(data_first_third)
 		data_middle_third = pd.DataFrame(data_set[total/3:(2*total)/3])
 		print len(data_middle_third)
 		data_last_third = pd.DataFrame(data_set[(2*total)/3:])
 		print len(data_last_third)
-		data = pd.concat([data_first_third, data_middle_third, data_last_third], axis = 1)
+		data = pd.concat([data_first_third, data_middle_third, data_last_third], axis = 1, join_axes = [data_first_third.index])
+		print len(data)"""
 	data_set = None
 	data = data.fillna(0)
 
