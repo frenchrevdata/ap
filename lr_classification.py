@@ -23,12 +23,15 @@ from sklearn.model_selection import train_test_split
 from processing_functions import compute_tfidf
 from xgboost import XGBClassifier
 
+
 train_cols = []
 
 def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
 	train, train_classification, speeches, speakers = data_clean(iteration, None, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
+
+	print len(train.columns)
 	"""### Remove procedural and other generic language
 	train.columns = train.columns.map(str)
 
@@ -39,8 +42,8 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 	train = train.drop(columns = columns_to_drop, axis = 1)"""
 
 
-	"""### Logistic Regression
-	model = LogisticRegression()
+	### Logistic Regression
+	"""model = LogisticRegression()
 	model.fit(train.get_values(), train_classification)
 	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
 
@@ -188,7 +191,7 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 			# 14 and 62, 0.635, 1580 features
 			# 14 and 64, 0.623,	1550 features
 			# 15 and 62, 0.6298,1502 features
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 15)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 17)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 62)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
@@ -240,6 +243,7 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 
 	return([data, classification, speeches, speakers])
 
+
 if __name__ == '__main__':
 	import sys
 	train_speeches_bigram = pickle.load(open("train_speeches_bigram.pickle", "rb"))
@@ -266,6 +270,9 @@ if __name__ == '__main__':
 
 
 	real_pred = run_test_classification(model, train_columns, test_speeches_bigram, test_speeches_unigram, test_total_freq_bigram, test_total_freq_unigram, bigram_doc_freq, unigram_doc_freq, train_number_speeches)
+
+	with open("real_pred.pickle", 'wb') as handle:
+		pickle.dump(real_pred, handle, protocol = 0)
 
 	real_pred = pd.concat([real_pred, pd.DataFrame(columns = ['Speech Text'])])
 
