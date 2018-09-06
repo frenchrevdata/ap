@@ -21,12 +21,16 @@ import xlsxwriter
 import string
 from nltk.stem.wordnet import WordNetLemmatizer
 import gensim
-from gensim import corpora
-
+from gensim import corpora, models
+import scipy
+from scipy.sparse import coo_matrix
+import lda
 
 #global speaker_list
 
 
+### NOTE FOR MYSELF
+# The two types of topic modeling are different functions. Once is commented out at all times in the parseFile function
 
 def remove_diacritic(input):
     '''
@@ -38,6 +42,7 @@ def remove_diacritic(input):
 
 def parseFile(votes):
 	justifications = []
+	votes_model2 = {}
 	file = open('marat.xml', "r")
 	contents = file.read()
 	contents = re.sub(r'(<p>(?:DÉPARTEMENT|DEPARTEMENT|DÉPARTEMENE)[\s\S]{1,35}<\/p>)', '', contents)
@@ -61,7 +66,11 @@ def parseFile(votes):
 
 		votes[speaker] = full_speech
 
+		if len(full_speech) > 30:
+			votes_model2[speaker] = full_speech
+
 	runTopicModel(justifications)
+	#topicModel(votes_model2)
 
 	df = pd.DataFrame.from_dict(votes, orient = 'index')
 	writer = pd.ExcelWriter('Marat_Justifications.xlsx')
@@ -87,7 +96,7 @@ def clean(just_speech):
 		word_to_append = remove_diacritic(unicode(word[0].replace("\n","").replace("\r",""), 'utf-8'))
 		french_stopwords.append(word_to_append)
 
-	just_speech = just_speech.replace("]"," ").replace("[", " ").replace("&"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("\`"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
+	just_speech = just_speech.replace("]"," ").replace("[", " ").replace("!"," ").replace("&"," ").replace(">"," ").replace("#"," ").replace("/"," ").replace("\`"," ").replace("'"," ").replace("*", " ").replace("`", " ").replace(";"," ").replace("?"," ").replace(",", " ").replace(":"," ").replace("."," ").replace("("," ").replace(")"," ")
 	clean_text = remove_stopwords(just_speech.lower(), french_stopwords)
 	clean_text = clean_text.replace("marat", " ").replace("accusation"," ")
 	#exclude = set(string.punctuation)
@@ -99,16 +108,74 @@ def runTopicModel(justifications):
 	dictionary = corpora.Dictionary(clean_speeches)
 	doc_term_matrix = [dictionary.doc2bow(doc) for doc in clean_speeches]
 	Lda = gensim.models.ldamodel.LdaModel
-	number_of_topics = 5
-	number_of_words = 3
-	ldamodel = Lda(doc_term_matrix, num_topics = number_of_topics, id2word = dictionary, passes = 50)
+	number_of_topics = 7
+	number_of_words = 15
+	ldamodel = Lda(doc_term_matrix, num_topics = number_of_topics, id2word = dictionary, passes = 1000)
 	results = ldamodel.print_topics(num_topics = number_of_topics, num_words = number_of_words)
 	filename = "topic_modeling_" + str(number_of_topics) + "_numtopics_" + str(number_of_words) + "_numwords.txt"
 	file = open(filename, 'w')
 	for topic in results:
-		file.write(topic[1] + "\n")
+		file.write(topic[1] + "\n\n")
 	file.close()
 	print(results)
+
+def topicModel(justifications):
+	clean_speeches = {}
+	for speaker in justifications:
+		clean_speeches[speaker] = clean(justifications[speaker]).split()
+	n_nonzero = 0
+	vocab = set()
+	for votes in clean_speeches.values():
+		unique_terms = set(votes)
+		vocab |= unique_terms
+		n_nonzero += len(unique_terms)
+	docnames = list(clean_speeches.keys())
+
+	docnames = np.array(docnames)
+	vocab = np.array(list(vocab))
+
+	vocab_sorter = np.argsort(vocab)
+
+	ndocs = len(docnames)
+	nvocab = len(vocab)
+
+	data = np.empty(n_nonzero, dtype=np.intc)
+	rows = np.empty(n_nonzero, dtype=np.intc)
+	cols = np.empty(n_nonzero, dtype=np.intc)
+
+	ind = 0
+
+	for docname, terms in clean_speeches.items():
+		term_indices = vocab_sorter[np.searchsorted(vocab, terms, sorter = vocab_sorter)]
+
+		uniq_indices, counts = np.unique(term_indices, return_counts=True)
+		n_vals = len(uniq_indices)
+		ind_end = ind + n_vals
+
+		data[ind:ind_end] = counts
+		cols[ind:ind_end] = uniq_indices
+		doc_idx = np.where(docnames == docname)
+		rows[ind:ind_end] = np.repeat(doc_idx, n_vals)
+
+		ind = ind_end
+
+	dtm = coo_matrix((data, (rows, cols)), shape = (ndocs, nvocab), dtype = np.intc)
+
+	number_of_topics = 7
+	n_top_words = 15
+
+	model = lda.LDA(n_topics = number_of_topics, n_iter = 1000, random_state = 1)
+	model.fit(dtm)
+	topic_word = model.topic_word_
+
+	filename = "topic_modeling2_" + str(number_of_topics) + "_numtopics_" + str(n_top_words) + "_numwords.txt"
+	file = open(filename, 'w')
+	for i, topic_dist in enumerate(topic_word):
+		topic_words = np.array(vocab)[np.argsort(topic_dist)][:-(n_top_words+1):-1]
+		file.write('Topic {}: {}'.format(i, ' '.join(topic_words)) + "\n")
+		print('Topic {}: {}'.format(i, ' '.join(topic_words)))
+	file.close()
+
 
 """def load_speakerlist(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'AP Speaker Authority List xlsx')
