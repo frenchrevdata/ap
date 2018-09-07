@@ -85,6 +85,10 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 		for key, val in bigrams_speeches.items():
 			writer.writerow([key, val])
 
+	# Creates the combined frequency document when not limiting more than three occurrences for purposes of use
+	# when creating the frequency map
+	print_to_excel(Girondins, Montagnards, 'combined_frequency_all.xlsx')
+
 	Girondins = {k:v for k,v in Girondins.items() if (v >= 3)} #and (len(gir_doc_freq[k]) > 1)}
 	print_to_csv(Girondins, "Girondins_counts.csv")
 
@@ -219,7 +223,7 @@ if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
-    speakers_to_analyze = load_list("Girondins and Montagnards New.xlsx")
+    speakers_to_analyze = load_list("Girondins and Montagnards New Mod.xlsx")
     Girondins = Counter()
     Montagnards = Counter()
     try:
