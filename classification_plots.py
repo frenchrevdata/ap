@@ -1,27 +1,16 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 
-from bs4 import BeautifulSoup
-import unicodedata
-import csv
+"""
+Plots the CDFs of the Girondins and Montagnards predictions from the classification analysis
+"""
+
 import pickle
-import regex as re
 import pandas as pd
 from pandas import *
 import numpy as np
-from nltk import word_tokenize
-from nltk.util import ngrams
 import collections
 from collections import Counter
-import os
-import math
-from collections import defaultdict
-from sklearn.linear_model import LogisticRegression
-from sklearn import metrics, preprocessing
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
-from processing_functions import compute_tfidf
-from xgboost import XGBClassifier
 import matplotlib.pyplot as plt
 
 
@@ -30,6 +19,9 @@ def create_arrays(real_pred):
 	gir_cols_drop = []
 	mont = real_pred
 	mont_cols_drop = []
+
+	# Limit the analysis to only the corrected predicted entries
+	# Girondins is 0 and Montagnards is 1
 	for i, index in enumerate(real_pred.index.values):
 		if (real_pred['Real classification'].iloc[i] == 1) or (real_pred['Predicted'].iloc[i] == 1):
 			gir_cols_drop.append(i)
@@ -45,16 +37,13 @@ def plot_cdf(gir_array, mont_array):
 	mont_probs = mont_array['Prob 1']
 
 	num_bins = 50
-	"""counts, bin_edges = np.histogram(gir_probs, bins = num_bins)
-	cdf = np.cumsum(counts)
-	plt.plot(bin_edges[1:], cdf/cdf[-1])
-	plt.savefig('gir_values.png')"""
-
-
-	#fig, ax = plt.subplots(figsize=(8,4))
 	
 	plt.hist(gir_probs, bins = num_bins, histtype = 'step', density = True, cumulative = True, label = 'Gir')
 	plt.hist(mont_probs, bins = num_bins, histtype = 'step', density = True, cumulative = True, label = 'Mont')
+
+	# This title will change according to which model is being analyzed
+	plt.title("CDFs for Logistic Regression Model")
+
 	plt.legend(loc = 'upper left')
 	plt.show()
 	plt.savefig('classification_values.png')
@@ -62,7 +51,10 @@ def plot_cdf(gir_array, mont_array):
 
 if __name__ == '__main__':
 	import sys
-	#real_pred = pickle.load(open("real_pred_lr.pickle", "rb"))
-	real_pred = pickle.load(open("real_pred_xgb.pickle", "rb"))
+	
+	# Only one of the following lines will be used depending on which model is being considered
+	real_pred = pickle.load(open("real_pred_lr.pickle", "rb"))
+	#real_pred = pickle.load(open("real_pred_xgb.pickle", "rb"))
+
 	gir_array, mont_array = create_arrays(real_pred)
 	plot_cdf(gir_array, mont_array)

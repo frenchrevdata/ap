@@ -1,36 +1,22 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 
-from bs4 import BeautifulSoup
-import unicodedata
-import csv
+"""
+This file is a collection of functions used multiple times throughout other scripts.
+It avoids a repetition of data.
+"""
+
 import pickle
-import regex as re
 import pandas as pd
 from pandas import *
 import numpy as np
-from nltk import word_tokenize
-from nltk.util import ngrams
-import collections
-from collections import Counter
-import os
-import math
 
 
+# Removes accents from the input parameter
 def remove_diacritic(input):
-    '''
-    Accept a unicode string, and return a normal string (bytes in Python 3)
-    without any diacritical marks.
-    '''
     return unicodedata.normalize('NFKD', input).encode('ASCII', 'ignore')
 
-def print_to_csv(dictionary, filename):
-	output_file = filename
-	with open(filename, mode='w') as f:
-		f.write('Bigrams|freq\n')
-		for bigram, count in dictionary.items():
-			f.write('{}|{}\n'.format(bigram, count))
-
+"""
 def print_to_excel(dict1, dict2, filename):
 	df = pd.DataFrame([dict1, dict2])
 	df = df.transpose()
@@ -38,7 +24,16 @@ def print_to_excel(dict1, dict2, filename):
 	writer = pd.ExcelWriter(filename)
 	df.to_excel(writer, 'Sheet1')
 	writer.save()
+"""
 
+# Writes the given dataframe to the provided filename
+# Assumes that the df parameter is a pandas dataframe
+def write_to_excel(df, filename):
+	writer = pd.ExcelWriter(filename)
+	df.to_excel(writer, 'Sheet1')
+	writer.save()
+
+# Loads an unspecified list of speakers into a pandas list from Excel
 def load_list(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name = 'Sheet1')
 	pd_list = pd_list.set_index('Name')
@@ -49,6 +44,7 @@ def load_list(speakernames):
 	pd_list.index = speakers
 	return pd_list
 
+# Loads the comprehensive speaker list into a pandas dataframe from Excel
 def load_speakerlist(speakernames):
 	pd_list = pd.read_excel(speakernames, sheet_name= 'AP Speaker Authority List xlsx')
 	pd_list = pd_list.set_index('Names')
@@ -59,6 +55,7 @@ def load_speakerlist(speakernames):
 	pd_list.index = speakers
 	return pd_list
 
+# Imports a given Excel file for use in the Girondins/Montagnards analysis
 def process_excel(filename):
 	xls = ExcelFile(filename)
 	first = xls.parse(xls.sheet_names[0])
@@ -71,6 +68,7 @@ def process_excel(filename):
 		third[item] = int(third[item])
 	return(third)
 
+# Computes the tf-idf score for given parameters
 def compute_tfidf(dictionary, num_speeches, doc_freq):
 	tfidf = {}
 	for ngram in dictionary:
@@ -83,8 +81,9 @@ def compute_tfidf(dictionary, num_speeches, doc_freq):
 		tfidf[ngram] = (1+math.log10(tf))*idf
 	return tfidf
 
+# Normalizes dictionaries for use in computing the distance between the two vectors
+# Returns an array of the two normalized dictionaries
 def normalize_dicts(first_dict, second_dict):
-	# Normalize counts
 	dict1 = first_dict
 	dict2 = second_dict
 	all_sum = 0
@@ -95,9 +94,5 @@ def normalize_dicts(first_dict, second_dict):
 
 	for key in dict2:
 		dict2[key] = float(dict2[key])/all_sum
-
-	"""print_to_excel(Girondins, Montagnards, 'combined_normalized.xlsx')
-	print_to_csv(Girondins, "Girondins_counts_normalized.csv")
-	print_to_csv(Montagnards, "Montagnards_counts_normalized.csv")"""
 
 	return([dict1, dict2])
