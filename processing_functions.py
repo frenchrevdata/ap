@@ -7,9 +7,11 @@ It avoids a repetition of data.
 """
 
 import pickle
+import unicodedata
 import pandas as pd
 from pandas import *
 import numpy as np
+import math
 
 
 # Removes accents from the input parameter
@@ -56,6 +58,7 @@ def load_speakerlist(speakernames):
 	return pd_list
 
 # Imports a given Excel file for use in the Girondins/Montagnards analysis
+# Make sure that the header of the first column in "Bigrams"
 def process_excel(filename):
 	xls = ExcelFile(filename)
 	first = xls.parse(xls.sheet_names[0])
