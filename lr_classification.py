@@ -1,21 +1,19 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 
-from bs4 import BeautifulSoup
+"""
+Develops a model on the training data and tests it on the testing data to understand whether an unknown speech
+can be correctly classified according to the party the speaker belongs to.
+"""
+
 import unicodedata
-import csv
 import pickle
 import regex as re
 import pandas as pd
 from pandas import *
 import numpy as np
-from nltk import word_tokenize
-from nltk.util import ngrams
 import collections
 from collections import Counter
-import os
-import math
-from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics, cross_validation, preprocessing
 from sklearn.metrics import confusion_matrix
@@ -26,21 +24,12 @@ from xgboost import XGBClassifier
 
 train_cols = []
 
+# Develops the training model
 def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "train"
 	train, train_classification, speeches, speakers = data_clean(iteration, None, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
-
-	print len(train.columns)
-	"""### Remove procedural and other generic language
-	train.columns = train.columns.map(str)
-
-	columns_to_drop = ["(u'salut',)", "(u'veux',)", "(u'``',)", "(u'voici',)", "(u'surtout',)", "(u'sais',)", "(u'quil',)", "(u'pu',)", "(u'peut-etre',)", "(u'lui-meme',)", "(u'lesquels',)", "(u'elle-meme',)", "(u'ae',)"]
-	for column in columns_to_drop:
-		test.drop(column, axis = 1)
-
-	train = train.drop(columns = columns_to_drop, axis = 1)"""
-
+	##### There are two models - Logistic Regression and XGB
 
 	### Logistic Regression
 	"""model = LogisticRegression()
@@ -54,20 +43,18 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 
 
 	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
-	#print ("Test CV Score: " + str(model.score(x_test, y_test)))
 
 	train_classification = pd.DataFrame(train_classification)
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
 	speakers = pd.DataFrame(speakers, columns = ['Speaker'])
 	
-	"""train_total = train.copy()
-	train_total.join(train_classification)
-	train_total.join(speeches)"""
+	# Creates a comprehensive dataframe to write to excel
 	train_total = pd.concat([train, train_classification, speeches, speakers], axis = 1)
 	writer = pd.ExcelWriter("training_data.xlsx")
 	train_total.to_excel(writer, 'Sheet1')
 	writer.save()
 
+	# Deletes these variables from memory to conserve space for other computations
 	train_classification = None
 	speeches = None
 	speakers = None
@@ -77,90 +64,54 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 
 
 	return [model, columns_to_return]
-	#return logreg
 
+# Runs the training model on the test set and generates predictions
 def run_test_classification(model, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	iteration = "test"
 
-
 	test, test_classification, speeches, speakers = data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches)
 
-	"""test_pred = model.predict(test.get_values())
-	accuracy = metrics.accuracy_score(test_classification, test_pred)"""
-
-
-	#test.columns = test.columns.map(str)
-
-	# Remove any columns not in the training set
-	"""cols_to_keep = []
-	for column in test.columns:
-		if column in train_columns:
-			cols_to_keep.append(column)
-	print cols_to_keep
-	test = test[cols_to_keep]
-	cols_to_keep = None"""
-
-
 	# Add columns of zero for features not in the test set but in the training set
-	"""np.zeros
-	nrows is number rows in the DataFrame
-	ncols
-	convert to dataframe and pass in names of columns
-	concatenate to other dataframe"""
-
 	col_names = []
 	for col in train_columns:
 		if col not in test.columns:
 			test[col] = 0
 			col_names.append(col)
-	#print len(test.columns)
 
-	"""numrows = test.shape[0]
-	numcols = len(col_names)
-	zero_array = np.zeros((numrows, numcols))
-	zero_array = pd.DataFrame(zero_array, columns = col_names)
-
-	#test.reset_index(drop = True)
-	test = pd.concat([test, zero_array], axis = 1, ignore_index = True)
-	#test.append(zero_array, ignore_index = True)
-	
-	#test_mod = pd.concat([test, zero_array], ignore_index = True)
-
-	#test.merge(zero_array, right_index = True).reset_index()"""
-
+	# Removes/ignores any columns not in the training data
 	test = test[train_columns]
 
 	print "Test CV Score: " + str(model.score(test.get_values(), test_classification))
 
+	# Creates a comprehensive dataframe
 	test_classification_df = pd.DataFrame(test_classification, columns = ['Real classification'])
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
 	speakers = pd.DataFrame(speakers, columns = ['Speaker'])
 
+	# Generates predictions
 	predictions = model.predict(test.get_values())
 	predicted_values = pd.DataFrame(predictions, columns = ['Predicted'])
-
-	print confusion_matrix(test_classification, predicted_values)
-
-	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
-	
-	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches, speakers], axis = 1)
-
 	write_to = pd.ExcelWriter("predictions.xlsx")
 	real_pred.to_excel(write_to, 'Sheet1')
 	write_to.save()
 
+	# Develops and prints the confusion matrix
+	print confusion_matrix(test_classification, predicted_values)
+
+	# Generates prediction probabilities
+	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
 	
-	#test.join(test_classification)
-	#test.join(speeches)
+	# Creates a comprehensive dataframe to develop an Excel file
+	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches, speakers], axis = 1)
+
 	test_total = pd.concat([test, test_classification_df, speeches, speakers], axis = 1)
 	writer = pd.ExcelWriter("test_data.xlsx")
-	#test_total.to_excel(writer, 'Sheet1')
 	test_total.to_excel(writer, 'Sheet1')
 	writer.save()
 
 	return real_pred
 
-### If doing train and test separately
+# Cleans the data and creates the feature set
 def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigram_freq, unigram_freq, bigram_doc_freq, unigram_doc_freq, num_speeches):
 	classification = []
 	data_set = []
@@ -182,15 +133,11 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 			classification.append(0)
 		else:
 			classification.append(1)
-		# add some doc freq cutoff here
+
+		# Feature selection taking place here
+		# Analysis accounts for bigrams and unigrams
 		if iteration == "train":
-			# 9 and 60 is best, 0.643, 2396 features
-			# 10 and 60, 0.635, 2183 features
-			# 13 and 60, 0.634, 1740 features
-			# 14 and 60, 0.633, 1617 features
-			# 14 and 62, 0.635, 1580 features
-			# 14 and 64, 0.623,	1550 features
-			# 15 and 62, 0.6298,1502 features
+			# Restricting features according to how many times they appear
 			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 17)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 62)}
 			
@@ -203,18 +150,13 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
 			unigram_scores = compute_tfidf(unigram_input, num_speeches, unigram_doc_freq)
 			
-			"""bigram_scores = compute_tfidf(bigram_speeches[speechid], num_speeches, bigram_doc_freq)
-			unigram_scores = compute_tfidf(unigram_speeches[speechid], num_speeches, unigram_doc_freq)"""
-
 		
 		merge_scores = bigram_scores.copy()
 		merge_scores.update(unigram_scores)
 		
 		data_set.append(merge_scores)
 
-		#data_set.append(bigram_scores)
-
-
+	# Remove data from memory to clear space for other computations
 	speechid_to_speaker = None
 	speakers_to_analyze = None
 	bigram_speeches = None
@@ -224,28 +166,17 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 	bigram_scores = None
 	unigram_scores = None
 
-	if iteration == "train":
-		data = pd.DataFrame(data_set)
-	else:
-		data = pd.DataFrame(data_set)
-		"""total = len(data_set)
-		data_first_third = pd.DataFrame(data_set[:total/3])
-		print len(data_first_third)
-		data_middle_third = pd.DataFrame(data_set[total/3:(2*total)/3])
-		print len(data_middle_third)
-		data_last_third = pd.DataFrame(data_set[(2*total)/3:])
-		print len(data_last_third)
-		data = pd.concat([data_first_third, data_middle_third, data_last_third], axis = 1, join_axes = [data_first_third.index])
-		print len(data)"""
+	data = pd.DataFrame(data_set)
 	data_set = None
 	data = data.fillna(0)
-
 
 	return([data, classification, speeches, speakers])
 
 
 if __name__ == '__main__':
 	import sys
+
+	# Load relevant stored data
 	train_speeches_bigram = pickle.load(open("train_speeches_bigram.pickle", "rb"))
 	train_speeches_unigram = pickle.load(open("train_speeches_unigram.pickle", "rb"))
 	train_total_freq_bigram = pickle.load(open("train_total_freq_bigram.pickle", "rb"))
@@ -274,10 +205,12 @@ if __name__ == '__main__':
 	with open("real_pred.pickle", 'wb') as handle:
 		pickle.dump(real_pred, handle, protocol = 0)
 
+	# Build comprehensive dataset with speeches to see why a speech may have been misclassified
 	real_pred = pd.concat([real_pred, pd.DataFrame(columns = ['Speech Text'])])
 
 	raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
 
+	# Includes only text of speeches where the speech was misclassified
 	for i, index in enumerate(real_pred.index.values):
 		if real_pred['Real classification'].iloc[i] != real_pred['Predicted'].iloc[i]:
 			real_pred['Speech Text'].iloc[i] = raw_speeches[real_pred['Speechid'].iloc[i]]

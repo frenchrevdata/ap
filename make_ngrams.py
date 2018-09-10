@@ -1,27 +1,25 @@
 #!/usr/bin/env python
 # -*- coding=utf-8 -*-
 
-from bs4 import BeautifulSoup
-import unicodedata
-import os
-import csv
-import pickle
-import regex as re
+"""
+Computes n-grams of a specified length on a given text
+"""
+
 import pandas as pd
 import numpy as np
 from nltk import word_tokenize
 from nltk.util import ngrams
 import collections
 from collections import Counter
-import gzip
 from processing_functions import remove_diacritic
 
+# Tokenize the input text according to the given amount with '1' being unigram, '2' being bigram, etc.
 def make_ngrams(input, amount):
 	token = word_tokenize(input)
 	n_grams = ngrams(token, amount)
 	return n_grams
 
-
+# Removes a set of predefined stop words
 def remove_stopwords(input, stopwords):
 	filtered_text = ""
 	for word in input.split():
@@ -29,7 +27,7 @@ def remove_stopwords(input, stopwords):
 			filtered_text = filtered_text + " " + word
 	return filtered_text
 
-
+# Cleans the text and then calls make_ngrams to develop the n-grams on the cleaned text
 def compute_ngrams(speech, order):
 	stopwords_from_file = open('FrenchStopwords.txt', 'r')
 	lines = stopwords_from_file.readlines()
