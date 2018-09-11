@@ -14,18 +14,12 @@ import regex as re
 from make_ngrams import compute_ngrams
 import math
 from collections import defaultdict
-from processing_functions import print_to_csv, print_to_excel, load_list, load_speakerlist, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
-
-
-"""calculate the frequency of each speaker
-compute distance to girondins frequency vector
-compute distance to montagnards frequency vector
-add dict of {speaker: [dist to Gir, dist to Montagnard]}"""
+from processing_functions import load_list, load_speakerlist, process_excel, remove_diacritic, compute_tfidf, normalize_dicts, write_to_excel
+from scipy import spatial
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
 
-
-def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_analyze, gir_frequency, mont_frequency):
+def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_analyze, gir_tfidf, mont_tfidf, num_speeches, doc_freq):
 	speaker_ngrams = {}
 	speakers_to_consider = []
 	speaker_distances = collections.defaultdict()
@@ -35,7 +29,6 @@ def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_a
 		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
 
 	for identity in raw_speeches:
-		### These two following lines are dependent on what time period to do this distance analysis on
 		date = re.findall(date_regex, str(identity))[0]
 		speaker_name = speechid_to_speaker[identity]
 		if (date >= "1792-09-20") and (date <= "1793-06-02") and (speaker_name in speakers_to_consider):
@@ -61,27 +54,55 @@ def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_a
 				pairing[bigram] = [identity, indv_speech_bigram[bigram]]"""
 
 	
-	#########
-	## Need to figure out how to merge based on bigrams
-	gir = pd.DataFrame.from_dict(gir_frequency, orient = "index")
-	mont = pd.DataFrame.from_dict(mont_frequency, orient = "index")
-	bohan = pd.DataFrame.from_dict(speaker_ngrams['Alain Bohan'], orient = "index")
-	df2 = pd.concat([bohan, gir, mont], axis = 1)
-	writer_new = pd.ExcelWriter("freq_test.xlsx")
-	df2.to_excel(writer_new, 'Sheet1')
-	writer_new.save()
+	## Need tf-idf vectors for gir and mont
+	## Need the doc_freq for the previous calcuations
+	## compute tf-idf for individual speakers
+	## compute cosine distance based on those vectors (dot product over length of vectors)
+	## compute cosine similarity between the difference between the two group vectors (subtract from each other)
+	## A - B, if positive more like A, if negative more like B
 
+	## create tf vector for each speech and store that so can just add
+	## Separately store single idf vector
+
+	#########
+
+	gir_dict = convert_keys_to_string(gir_tfidf)
+	mont_dict = convert_keys_to_string(mont_tfidf)
+	doc_freq_dict = convert_keys_to_string(doc_freq)
+	gir_mont_diff = compute_difference(gir_dict, mont_dict)
+	#gir_dict = gir_tfidf
+	#print gir_dict
+	#mont_dict = mont_tfidf
 	for speaker in speaker_ngrams:
+		speaker_dict = convert_keys_to_string(speaker_ngrams[speaker])
+		to_compare = compute_tfidf(speaker_dict, num_speeches, doc_freq_dict)
+		gir_dist = cosine_similarity(gir_dict, to_compare)
+		mont_dist = cosine_similarity(mont_dict, to_compare)
+		# Need to actually compute the distance
+		gir_mont_diff_dist = cosine_similarity(gir_mont_diff, to_compare)
+		speaker_distances[speaker] = [gir_dist, mont_dist, gir_mont_diff_dist]
+
+	"""
+	#speaker_dict = {(str(k),v) for k,v in speaker_ngrams['Francois Chabot']}
+	speaker_dict = convert_keys_to_string(speaker_ngrams['Francois Chabot'])
+	to_compare = compute_tfidf(speaker_dict, num_speeches, doc_freq)
+	gir_dist = cosine_similarity(gir_dict, to_compare)
+	df = pd.DataFrame([to_compare, gir_dict])
+	df = df.transpose()
+	write_to_excel(df, "Francois Chabot Test.xlsx")"""
+
+	
+	"""for speaker in speaker_ngrams:
 		#to_compare = {k:v for k,v in speaker_ngrams[speaker].items() if (v >= 3)}
 		to_compare = speaker_ngrams[speaker]
-		gir_dict = gir_frequency
-		mont_dict = mont_frequency
+		gir_dict = gir_tfidf
+		mont_dict = mont_tfidf
 		gir_normalized = normalize_dicts(to_compare, gir_dict)
 		gir_dist = 	compute_distance(gir_normalized[0], gir_normalized[1])
 		to_compare = speaker_ngrams[speaker]
 		mont_normalized = normalize_dicts(to_compare, mont_dict)
 		mont_dist = compute_distance(mont_normalized[0], mont_normalized[1])
-		speaker_distances[speaker] = [gir_dist, mont_dist]
+		speaker_distances[speaker] = [gir_dist, mont_dist]"""
 
 	
 
@@ -92,7 +113,7 @@ def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_a
 
 	df = pd.DataFrame.from_dict(speaker_distances)
 	df = df.transpose()
-	df.columns = ["dist to Girondins", "dist to Montagnards"]
+	df.columns = ["dist to Girondins", "dist to Montagnards", "dist to difference"]
 	filename = "freq_dist_map.xlsx"
 	writer = pd.ExcelWriter(filename)
 	df.to_excel(writer, 'Sheet1')
@@ -113,6 +134,32 @@ def build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_a
 	with open(pickle_filename_2, 'wb') as handle:
 		pickle.dump(chronology, handle, protocol = 0)"""
 
+def compute_difference(dict1, dict2):
+	diff = {}
+	for k in dict1:
+		diff[k] = dict1[k] - dict2[k]
+	return diff 
+
+# Need this function because the keys for one of the dictionaries were not strings so the match check
+# in cosine similarity was not working
+def convert_keys_to_string(dictionary):
+	to_return = {}
+	for k in dictionary:
+		to_return[str(k)] = dictionary[k]
+	return to_return
+
+def cosine_similarity(dict1, dict2):
+	numerator = 0
+	denom1 = 0
+	denom2 = 0
+	for k in dict2:
+		if k in dict1:
+			numerator += dict1[k]*dict2[k]
+		denom2 += dict2[k]*dict2[k]
+	for v in dict1.values():
+		denom1 += v*v
+	cos_sim = numerator/math.sqrt(denom1*denom2)
+	return cos_sim
 
 def check_num_speakers(speech_data, speaker, party_dict):
 	for bigram in speech_data:
@@ -124,9 +171,11 @@ def check_num_speakers(speech_data, speaker, party_dict):
 	return party_dict
 	
 
-def compute_distance(dict1, dict2):
+def compute_distance(first_dict, second_dict):
 	diff_counter = {}
 	
+	dict1 = first_dict
+	dict2 = second_dict
 	# Compute the Euclidean distance between the two vectors
 	## When only bigrams in both groups accounted for
 	"""for bigram in dict1:
@@ -167,8 +216,12 @@ if __name__ == '__main__':
     gir_frequency = process_excel('girondins_frequency.xlsx')
     mont_frequency = process_excel("montagnards_frequency.xlsx")"""
     #frequency vectors when all possible bigrams accounted for
-    gir_frequency = process_excel('girondins_frequency_all.xlsx')
-    mont_frequency = process_excel("montagnards_frequency_all.xlsx")
+    gir_tfidf = process_excel('girondins_tfidf.xlsx')
+    mont_tfidf = process_excel("montagnards_tfidf.xlsx")
+    #doc_freq = process_excel("doc_freq.xlsx")
+    doc_freq = pickle.load(open("bigram_doc_freq.pickle", "rb"))
+    file = open('num_speeches.txt', 'r')
+    num_speeches = int(file.read())
     speakers_to_analyze = load_list("Girondins and Montagnards New Mod.xlsx")
 
-    build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_analyze, gir_frequency, mont_frequency)
+    build_vectors(raw_speeches, speechid_to_speaker, speaker_list, speakers_to_analyze, gir_tfidf, mont_tfidf, num_speeches, doc_freq)
