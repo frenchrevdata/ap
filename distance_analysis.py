@@ -39,9 +39,9 @@ def distance_analysis():
 	by_month = pd.read_excel("By_Month.xlsx")
 	by_date = pd.read_excel("By_Date.xlsx")
 
-	"""by_month = create_tfidf_vectors(by_month)
+	by_month = create_tfidf_vectors(by_month)
 	by_month_dist = compute_distances(by_month, 'month',  gir_dict, mont_dict, gir_mont_diff)
-	write_to_excel(by_month_dist, 'by_month_distances.xlsx')"""
+	write_to_excel(by_month_dist, 'by_month_distances.xlsx')
 
 	by_date = create_tfidf_vectors(by_date)
 	by_period = aggregate_by_period(by_date)
@@ -52,16 +52,7 @@ def distance_analysis():
 	by_date_dist = compute_distances(by_date, 'date',  gir_dict, mont_dict, gir_mont_diff)
 	write_to_excel(by_date_dist, 'by_date_distances.xlsx')
 
-	"""by_month_convention = pd.read_excel("By_Month_Convention.xlsx")
-	by_date_convention = pd.read_excel("By_Date_Convention.xlsx")
-
-	by_month_convention = create_tfidf_vectors(by_month_convention)
-	by_month_convention_dist = compute_distances(by_month_convention, 'month')
-
-	by_date_convention = create_tfidf_vectors(by_date_convention)
-	by_date_convention_dist = compute_distances(by_date_convention, 'date')"""
-
-
+	
 def gen_bigrams(text):
 	compute_ngrams(text, 2)
 
@@ -73,11 +64,12 @@ def aggregate_by_period(dataframe):
 	convention = Counter()
 	after_convention = Counter()
 	for i, time in enumerate(dataframe['Full Date']):
-		if (time >= "1792-06-10") and (time <= "1792-08-10"):
+		time = str(time)
+		if (time >= "1792-6-10") and (time <= "1792-8-10"):
 			before_convention = before_convention + dataframe['ngrams'].iloc[i]
-		if (time >= "1792-09-20") and (time < "1793-06-02"):
+		if (time >= "1792-9-20") and (time < "1793-6-2"):
 			convention = convention + dataframe['ngrams'].iloc[i]
-		if (time >= "1793-06-02") and (time <= "1793-08-02"):
+		if (time >= "1793-6-2") and (time <= "1793-8-2"):
 			after_convention = after_convention + dataframe['ngrams'].iloc[i]
 
 	before_convention_tfidf = compute_tfidf(before_convention, num_speeches, doc_freq)
@@ -92,7 +84,6 @@ def aggregate_by_period(dataframe):
 	#write_to_excel(period_df, 'periods.xlsx')
 
 	period_df = [before_convention_tfidf, convention_tfidf, after_convention_tfidf]
-
 	return period_df
 	
 
@@ -113,19 +104,17 @@ def create_tfidf_vectors(dataframe):
 def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 	period_vector = pd.Series()
 	if period == 'month':
-		period_vector = dataframe['Year-Month']
+		period_vector = dataframe['Year-Month'].tolist()
+		period_vector = pd.Series(period_vector)
 		tfidf_scores = dataframe['tfidf'].tolist()
 	elif period == 'date':
-		period_vector = dataframe['Date']
+		period_vector = dataframe['Date'].tolist()
+		period_vector = pd.Series(period_vector)
 		tfidf_scores = dataframe['tfidf'].tolist()
 	else:
 		periods = ["Before convention", "Convention", "After convention"]
 		period_vector = pd.Series(periods)
 		tfidf_scores = dataframe
-
-	"""gir_dict = pickle.load(open("gir_dict.pickle", "rb"))
-	mont_dict = pickle.load(open("mont_dict.pickle", "rb"))
-	gir_mont_diff = pickle.load(open("gir_mont_diff.pickle", "rb"))"""
 
 	#tfidf_scores = dataframe['tfidf'].to_dict()
 	gir_dist = []
