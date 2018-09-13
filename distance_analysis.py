@@ -28,23 +28,38 @@ doc_freq = pickle.load(open("bigram_doc_freq.pickle", "rb"))
 
 
 def distance_analysis():
+
+	gir_tfidf = process_excel('girondins_tfidf_allbigrams.xlsx')
+	mont_tfidf = process_excel("montagnards_tfidf_allbigrams.xlsx")
+
+	gir_dict = convert_keys_to_string(gir_tfidf)
+	mont_dict = convert_keys_to_string(mont_tfidf)
+	gir_mont_diff = compute_difference(gir_dict, mont_dict)
+
 	by_month = pd.read_excel("By_Month.xlsx")
-    by_date = pd.read_excel("By_Date.xlsx")
+	by_date = pd.read_excel("By_Date.xlsx")
 
-    by_month = create_tfidf_vectors(by_month)
-    by_month_dist = compute_distances(by_month, 'month')
+	"""by_month = create_tfidf_vectors(by_month)
+	by_month_dist = compute_distances(by_month, 'month',  gir_dict, mont_dict, gir_mont_diff)
+	write_to_excel(by_month_dist, 'by_month_distances.xlsx')"""
 
-    by_date = create_tfidf_vectors(by_date)
-    by_date_dist = compute_distances(by_date, 'date')
+	by_date = create_tfidf_vectors(by_date)
+	by_period = aggregate_by_period(by_date)
 
-    by_month_convention = pd.read_excel("By_Month_Convention.xlsx")
-    by_date_convention = pd.read_excel("By_Date_Convention.xlsx")
+	by_period_dist = compute_distances(by_period, 'period', gir_dict, mont_dict, gir_mont_diff)
+	write_to_excel(by_period_dist, "by_period_distances.xlsx")
 
-    by_month_convention = create_tfidf_vectors(by_month_convention)
-    by_month_convention_dist = compute_distances(by_month_convention, 'month')
+	by_date_dist = compute_distances(by_date, 'date',  gir_dict, mont_dict, gir_mont_diff)
+	write_to_excel(by_date_dist, 'by_date_distances.xlsx')
 
-    by_date_convention = create_tfidf_vectors(by_date_convention)
-    by_date_convention_dist = compute_distances(by_date_convention, 'date')
+	"""by_month_convention = pd.read_excel("By_Month_Convention.xlsx")
+	by_date_convention = pd.read_excel("By_Date_Convention.xlsx")
+
+	by_month_convention = create_tfidf_vectors(by_month_convention)
+	by_month_convention_dist = compute_distances(by_month_convention, 'month')
+
+	by_date_convention = create_tfidf_vectors(by_date_convention)
+	by_date_convention_dist = compute_distances(by_date_convention, 'date')"""
 
 
 def gen_bigrams(text):
@@ -52,6 +67,34 @@ def gen_bigrams(text):
 
 def gen_tfidf(vector):
 	compute_tfidf(vector, num_speeches, doc_freq)
+
+def aggregate_by_period(dataframe):
+	before_convention = Counter()
+	convention = Counter()
+	after_convention = Counter()
+	for i, time in enumerate(dataframe['Full Date']):
+		if (time >= "1792-06-10") and (time <= "1792-08-10"):
+			before_convention = before_convention + dataframe['ngrams'].iloc[i]
+		if (time >= "1792-09-20") and (time < "1793-06-02"):
+			convention = convention + dataframe['ngrams'].iloc[i]
+		if (time >= "1793-06-02") and (time <= "1793-08-02"):
+			after_convention = after_convention + dataframe['ngrams'].iloc[i]
+
+	before_convention_tfidf = compute_tfidf(before_convention, num_speeches, doc_freq)
+	convention_tfidf = compute_tfidf(convention, num_speeches, doc_freq)
+	after_convention_tfidf = compute_tfidf(after_convention, num_speeches, doc_freq)
+
+	before_convention_df = pd.DataFrame.from_dict(before_convention_tfidf, orient = "index")
+	convention_df = pd.DataFrame.from_dict(convention_tfidf, orient = "index")
+	after_convention_df = pd.DataFrame.from_dict(after_convention_tfidf, orient = "index")
+
+	#period_df = pd.DataFrame([before_convention, convention, after_convention])
+	#write_to_excel(period_df, 'periods.xlsx')
+
+	period_df = [before_convention_tfidf, convention_tfidf, after_convention_tfidf]
+
+	return period_df
+	
 
 def create_tfidf_vectors(dataframe):
 	speeches = dataframe['concat_speeches'].tolist()
@@ -67,28 +110,58 @@ def create_tfidf_vectors(dataframe):
 	dataframe['tfidf'] = tfidf_to_add.values
 	return dataframe
 
-def compute_distances(dataframe, period):
+def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 	period_vector = pd.Series()
 	if period == 'month':
-		period_vector = dataframe['Month']
-	if period == 'date':
-		period_vector = dataframe['Date'].tolist()
+		period_vector = dataframe['Year-Month']
+		tfidf_scores = dataframe['tfidf'].tolist()
+	elif period == 'date':
+		period_vector = dataframe['Date']
+		tfidf_scores = dataframe['tfidf'].tolist()
+	else:
+		periods = ["Before convention", "Convention", "After convention"]
+		period_vector = pd.Series(periods)
+		tfidf_scores = dataframe
 
-	gir_dict = pickle.load(open("gir_dict.pickle", "rb"))
-    mont_dict = pickle.load(open("mont_dict.pickle", "rb"))
-    gir_mont_diff = pickle.load(open("gir_mont_diff.pickle", "rb"))
+	"""gir_dict = pickle.load(open("gir_dict.pickle", "rb"))
+	mont_dict = pickle.load(open("mont_dict.pickle", "rb"))
+	gir_mont_diff = pickle.load(open("gir_mont_diff.pickle", "rb"))"""
 
-    tfidf_scores = dataframe['tfidf'].tolist()
-    for counter in tfidf_scores:
-    	gir_dist.append(1 - cosine_similarity(gir_dict, tfidf_scores))
-    	mont_dist.append(1 - cosine_similarity(mont_dict, tfidf_scores))
-    	gir_mont_diff_dist.append(cosine_similarity(gir_mont_diff, tfidf_scores))
+	#tfidf_scores = dataframe['tfidf'].to_dict()
+	gir_dist = []
+	mont_dist = []
+	gir_mont_diff_dist = []
+	for counter in tfidf_scores:
+	#for counter in tfidf_scores.items():
+		# The way that extraction of a column from a dataframe works, it returns a tuple and the data is the second entry
+		#to_compare = counter[1]
+		to_compare = counter
+		to_compare = convert_keys_to_string(to_compare)
+		gir_dist.append(1 - cosine_similarity(gir_dict, to_compare))
+		mont_dist.append(1 - cosine_similarity(mont_dict, to_compare))
+		gir_mont_diff_dist.append(cosine_similarity(gir_mont_diff, to_compare))
 
-    gir_dist = pd.Series(gir_dist)
-    mont_dist = pd.Series(mont_dist)
-    gir_mont_diff_dist = pd.Series(gir_mont_diff_dist)
-    comp_df = pd.DateFrame([period_vector, gir_dist, mont_dist, gir_mont_diff_dist])
-    return comp_df
+	gir_dist = pd.Series(gir_dist)
+	mont_dist = pd.Series(mont_dist)
+	gir_mont_diff_dist = pd.Series(gir_mont_diff_dist)
+	comp_df = pd.DataFrame([period_vector, gir_dist, mont_dist, gir_mont_diff_dist])
+	comp_df = comp_df.transpose()
+	comp_df.columns = [period, 'distance to gir', 'distance to mont', 'distance to diff']
+	return comp_df
+
+# Need this function because the keys for one of the dictionaries were not strings so the match check
+# in cosine similarity was not working
+def convert_keys_to_string(dictionary):
+	to_return = {}
+	for k in dictionary:
+		to_return[str(k)] = dictionary[k]
+	return to_return
+
+def compute_difference(dict1, dict2):
+	diff = {}
+	for k in dict1:
+		diff[k] = dict1[k] - dict2[k]
+	return diff 
 
 
 def cosine_similarity(dict1, dict2):
