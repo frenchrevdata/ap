@@ -99,3 +99,33 @@ def normalize_dicts(first_dict, second_dict):
 		dict2[key] = float(dict2[key])/all_sum
 
 	return([dict1, dict2])
+
+# Need this function because the keys for one of the dictionaries were not strings so the match check
+# in cosine similarity was not working
+def convert_keys_to_string(dictionary):
+	to_return = {}
+	for k in dictionary:
+		to_return[str(k)] = dictionary[k]
+	return to_return
+
+# Computes the difference between the values of two dictionaries
+def compute_difference(dict1, dict2):
+	diff = {}
+	for k in dict1:
+		diff[k] = dict1[k] - dict2[k]
+	return diff 
+
+# Computes the cosine similiarity between two dictionaries
+# Cosine similarity is dot product over the norms of the two vectors
+def cosine_similarity(dict1, dict2):
+	numerator = 0
+	denom1 = 0
+	denom2 = 0
+	for k in dict2:
+		if k in dict1:
+			numerator += dict1[k]*dict2[k]
+		denom2 += dict2[k]*dict2[k]
+	for v in dict1.values():
+		denom1 += v*v
+	cos_sim = numerator/math.sqrt(denom1*denom2)
+	return cos_sim
