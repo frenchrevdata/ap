@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pickle
+import csv
 import pandas as pd
 from pandas import *
 import collections
@@ -39,7 +40,7 @@ def firststep():
 
 	for speechid in raw_speeches:
 		fulldate = speechid[0:10]
-		if (fulldate >= "1792-06-10") and (fulldate <= "1793-08-02"):
+		if (fulldate >= "1792-09-20") and (fulldate <= "1793-06-02"):
 			speech_bigrams = compute_ngrams(raw_speeches[speechid], 2)
 
 			speaker = speechid_to_speaker[speechid]
@@ -50,13 +51,18 @@ def firststep():
 				byspeaker_allspeakers[speaker] = byspeaker_allspeakers[speaker] + speech_bigrams
 			else:
 				byspeaker_allspeakers[speaker] = speech_bigrams
+			speech_bigrams = None
 
 	with open("byspeaker_allspeakers.pickle", "wb") as handle:
 		pickle.dump(byspeaker_allspeakers, handle, protocol = 0)
 
-	byspeaker_allspeakers = pd.DataFrame.from_dict(byspeaker_allspeakers, orient = "index")
+	w = csv.writer(open("byspeaker_allspeakers.csv", "w"))
+	for key, val in byspeaker.items():
+		w.writerow([key, val])
 
-	write_to_excel(byspeaker_allspeakers, "byspeaker_allspeakers.xlsx")
+	"""byspeaker_allspeakers = pd.DataFrame.from_dict(byspeaker_allspeakers, orient = "index")
+
+	write_to_excel(byspeaker_allspeakers, "byspeaker_allspeakers.xlsx")"""
 
 
 

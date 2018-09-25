@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pickle
+import csv
 import pandas as pd
 from pandas import *
 import collections
@@ -32,17 +33,24 @@ def firststep():
 				byyearmonth[yearmonth] = byyearmonth[yearmonth] + speech_bigrams
 			else:
 				byyearmonth[yearmonth] = speech_bigrams
+			speech_bigrams = None
 
 
 			#year_month[speechid] = yearmonth
 			#byyearmonth[speechid] = speech_bigrams
 	print "here"
 
-	byyearmonth = pd.DataFrame.from_dict(byyearmonth_dict, orient = "index")
-
-	write_to_excel(byyearmonth, "byyearmonth.xlsx")
 	with open("byyearmonth.pickle", "wb") as handle:
 		pickle.dump(byyearmonth, handle, protocol = 0)
+
+	w = csv.writer(open("byyearmonth.csv", "w"))
+	for key, val in byspeaker.items():
+		w.writerow([key, val])
+
+	"""byyearmonth = pd.DataFrame.from_dict(byyearmonth, orient = "index")
+
+	write_to_excel(byyearmonth, "byyearmonth.xlsx")"""
+	
 
 
 if __name__ == '__main__':

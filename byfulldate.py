@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import csv
 import pickle
 import pandas as pd
 from pandas import *
@@ -31,18 +32,22 @@ def firststep():
 				byfulldate[fulldate] = byfulldate[fulldate] + speech_bigrams
 			else:
 				byfulldate[fulldate] = speech_bigrams
+			speech_bigrams = None
 
 
 			#year_month[speechid] = yearmonth
 			#byyearmonth[speechid] = speech_bigrams
-	print "here"
 
 	with open("byfulldate.pickle", "wb") as handle:
 		pickle.dump(byfulldate, handle, protocol = 0)
 
-	byfulldate = pd.DataFrame.from_dict(byfulldate, orient = "index")
+	w = csv.writer(open("bydate.csv", "w"))
+	for key, val in byspeaker.items():
+		w.writerow([key, val])
 
-	write_to_excel(byfulldate, "byfulldate.xlsx")
+	"""byfulldate = pd.DataFrame.from_dict(byfulldate, orient = "index")
+
+	write_to_excel(byfulldate, "byfulldate.xlsx")"""
 
 
 if __name__ == '__main__':
