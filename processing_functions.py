@@ -111,8 +111,16 @@ def convert_keys_to_string(dictionary):
 # Computes the difference between the values of two dictionaries
 def compute_difference(dict1, dict2):
 	diff = {}
+	keys_seen = []
 	for k in dict1:
-		diff[k] = dict1[k] - dict2[k]
+		if k in dict2:
+			keys_seen.append(k)
+			diff[k] = dict1[k] - dict2[k]
+		else:
+			diff[k] = dict1[k]
+	for key in dict2:
+		if key not in keys_seen:
+			diff[key] = dict2[key]
 	return diff 
 
 # Computes the cosine similiarity between two dictionaries
