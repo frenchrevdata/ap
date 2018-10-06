@@ -45,7 +45,6 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 
 	gir_num_speeches = 0
 	mont_num_speeches = 0
-	plein_num_speeches = 0
 	gir_docs = {}
 	mont_docs = {}
 	plein_docs = {}
@@ -53,57 +52,49 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	for speaker in speakers_to_analyze.index.values:
 		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
 
-	for identity in raw_speeches:
-		date = re.findall(date_regex, str(identity))[0]
-		if (date >= "1792-09-20") and (date <= "1793-06-02"):
-			# Keeps track of the number of speeches per speaker as well as the number of characters spoken by each speaker
-			# To potentially establish a cutoff for analysis purposes
-			speaker_name = speechid_to_speaker[identity]
-			party = ""
-			if speaker_name in speakers_to_consider:
-				party = speakers_to_analyze.loc[speaker_name, "Party"]
-			else:
-				party = "Plein"
-			augment(speaker_num_speeches, speaker_name)
-			if speaker_name in speaker_char_count:
-				speaker_char_count[speaker_name] += len(raw_speeches[identity])
-			else:
-				speaker_char_count[speaker_name] = len(raw_speeches[identity])
-			indv_speech_bigram = compute_ngrams(raw_speeches[identity], 2)
-			for bigram in indv_speech_bigram:
-				augment(bigram_doc_freq, bigram)
-
-				# Maintains a list of speeches in which given bigrams are spoken in
-				if bigram in bigrams_to_speeches:
-					bigrams_to_speeches[bigram].append(identity)
+	for speaker_name in speakers_to_consider:
+		print speaker_name
+		party = speakers_to_analyze.loc[speaker_name, "Party"]
+		speech = Counter()
+		for identity in raw_speeches:
+			date = re.findall(date_regex, str(identity))[0]
+			if (date >= "1792-09-20") and (date <= "1793-06-02") and (speaker_name == speechid_to_speaker[identity]):
+				# Keeps track of the number of speeches per speaker as well as the number of characters spoken by each speaker
+				# To potentially establish a cutoff for analysis purposes
+				augment(speaker_num_speeches, speaker_name)
+				if speaker_name in speaker_char_count:
+					speaker_char_count[speaker_name] += len(raw_speeches[identity])
 				else:
-					bigrams_to_speeches[bigram] = []
-					bigrams_to_speeches[bigram].append(identity)
+					speaker_char_count[speaker_name] = len(raw_speeches[identity])
 
-			# Augments the relevant variables according to the party the speaker belongs to
-			if party == "Girondins":
-				gir_num_speeches += 1
-				gir_docs = check_num_speakers(indv_speech_bigram, speaker_name, gir_docs)
-				try:
-					Girondins = Girondins + indv_speech_bigram
-				except NameError:
-					Girondins = indv_speech_bigram
-			elif party == "Montagnards":
-				mont_num_speeches += 1
-				mont_docs = check_num_speakers(indv_speech_bigram, speaker_name, mont_docs)
-				try:
-					Montagnards = Montagnards + indv_speech_bigram
-				except NameError:
-					Montagnards = indv_speech_bigram
-			# Creates a Plein category that is neither Girondins or Montagnards to better understand speakers that are not distinctly one
-			# or the other
-			else:
-				plein_num_speeches += 1
-				plein_docs = check_num_speakers(indv_speech_bigram, speaker_name, plein_docs)
-				try:
-					Plein = Plein + indv_speech_bigram
-				except NameError:
-					Plein = indv_speech_bigram
+				indv_speech_bigram = compute_ngrams(raw_speeches[identity], 2)
+
+				for bigram in indv_speech_bigram:
+					augment(bigram_doc_freq, bigram)
+
+					# Maintains a list of speeches in which given bigrams are spoken in
+					if bigram in bigrams_to_speeches:
+						bigrams_to_speeches[bigram].append(identity)
+					else:
+						bigrams_to_speeches[bigram] = []
+						bigrams_to_speeches[bigram].append(identity)
+
+				# Augments the relevant variables according to the party the speaker belongs to
+				if party == "Girondins":
+					gir_num_speeches += 1
+					gir_docs = check_num_speakers(indv_speech_bigram, speaker_name, gir_docs)
+					try:
+						Girondins = Girondins + indv_speech_bigram
+					except NameError:
+						Girondins = indv_speech_bigram
+				else:
+					mont_num_speeches += 1
+					mont_docs = check_num_speakers(indv_speech_bigram, speaker_name, mont_docs)
+					try:
+						Montagnards = Montagnards + indv_speech_bigram
+					except NameError:
+						Montagnards = indv_speech_bigram
+			
 
 				#speech = speech + indv_speech_bigram
 
@@ -117,41 +108,42 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	write_to_excel(df_bigrams_to_speeches, 'bigrams_to_speeches.xlsx')"""
 
 	# Computes the tf_idf scores for each bigram and for both the Girondins and Montaganards vectors
-	num_speeches = gir_num_speeches + mont_num_speeches + plein_num_speeches
+	num_speeches = gir_num_speeches + mont_num_speeches
+	with open('gir_speeches_noplein.txt', 'w') as f:
+		f.write('%d' % gir_num_speeches)
+	with open('mont_speeches_noplein.txt', 'w') as f:
+		f.write('%d' % mont_num_speeches)
 	print num_speeches
 
-	with open('speaker_num_speeches_withplein.pickle', 'wb') as handle:
+	with open('speaker_num_speeches.pickle', 'wb') as handle:
 		pickle.dump(speaker_num_speeches, handle, protocol = 0)
 
-	with open('speaker_char_count_withplein.pickle', 'wb') as handle:
+	with open('speaker_char_count.pickle', 'wb') as handle:
 		pickle.dump(speaker_num_speeches, handle, protocol = 0)
 
-	w = csv.writer(open("speaker_num_speeches_withplein.csv", "w"))
+	w = csv.writer(open("speaker_num_speeches.csv", "w"))
 	for key, val in speaker_num_speeches.items():
 		w.writerow([key, val])
 
-	w = csv.writer(open("speaker_char_count_withplein.csv", "w"))
+	w = csv.writer(open("speaker_char_count.csv", "w"))
 	for key, val in speaker_char_count.items():
 		w.writerow([key, val])
 
 	# Write the number of speeches and doc_frequency to memory for use in further analysis
-	with open('num_speeches_withplein.txt', 'w') as f:
+	with open('num_speeches_noplein.txt', 'w') as f:
 		f.write('%d' % num_speeches)
 	df_doc_freq = pd.DataFrame.from_dict(bigram_doc_freq, orient = "index")
 	write_to_excel(df_doc_freq, 'doc_freq.xlsx')
 
-	with open("bigram_doc_freq_withplein.pickle", 'wb') as handle:
+	with open("bigram_doc_freq_noplein.pickle", 'wb') as handle:
 		pickle.dump(bigram_doc_freq, handle, protocol = 0)
 
-	with open("Girondins_withplein.pickle", 'wb') as handle:
+	with open("Girondins.pickle", 'wb') as handle:
 		pickle.dump(Girondins, handle, protocol = 0)
-	with open("Montagnards_withplein.pickle", 'wb') as handle:
+	with open("Montagnards.pickle", 'wb') as handle:
 		pickle.dump(Montagnards, handle, protocol = 0)
-	with open("Plein.pickle", 'wb') as handle:
-		pickle.dump(Plein, handle, protocol = 0)
 	gir_tfidf = compute_tfidf(Girondins, num_speeches, bigram_doc_freq)
 	mont_tfidf = compute_tfidf(Montagnards, num_speeches, bigram_doc_freq)
-	plein_tfidf = compute_tfidf(Plein, num_speeches, bigram_doc_freq)
 
 	"""with open("gir_tfidf.pickle", 'wb') as handle:
 		pickle.dump(gir_tfidf, handle, protocol = 0)
@@ -164,27 +156,25 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	# Stores the tf_idf vectors
 	df_gir_tfidf = pd.DataFrame.from_dict(gir_tfidf, orient = "index")
 	#df_gir_tfidf.columns = ['Bigrams', 'tfidf']
-	write_to_excel(df_gir_tfidf, 'gir_tfidf_withplein.xlsx')
+	write_to_excel(df_gir_tfidf, 'gir_tfidf.xlsx')
 	df_mont_tfidf = pd.DataFrame.from_dict(mont_tfidf, orient = "index")
 	#df_mont_tfidf.columns = ['Bigrams', 'tfidf']
-	write_to_excel(df_mont_tfidf, 'mont_tfidf_withplein.xlsx')
-	df_plein_tfidf = pd.DataFrame.from_dict(plein_tfidf, orient = "index")
-	#df_mont_tfidf.columns = ['Bigrams', 'tfidf']
-	write_to_excel(df_plein_tfidf, 'plein_tfidf.xlsx')
+	write_to_excel(df_mont_tfidf, 'mont_tfidf.xlsx')
+
 
 	df_tfidf_combined = pd.DataFrame([gir_tfidf, mont_tfidf])
 	df_tfidf_combined = df_tfidf_combined.transpose()
 	df_tfidf_combined.columns = ["Girondins", "Montagnards"]
-	write_to_excel(df_tfidf_combined, 'combined_tfidf_withplein.xlsx')
+	write_to_excel(df_tfidf_combined, 'combined_tfidf.xlsx')
 
 	# Constrains the analysis of Girondins and Montagnards frequencies if the frequency more 3 and optionally if in a certain number of speeches
 	Girondins = {k:v for k,v in Girondins.items() if (v >= 3)} #and (len(gir_docs[k]) > 1)}
 	df_girondins = pd.DataFrame.from_dict(Girondins, orient = "index")
-	write_to_excel(df_girondins, "Girondins_counts_withplein.xlsx")
+	write_to_excel(df_girondins, "Girondins_counts.xlsx")
 
 	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3)} #and (len(mont_docs[k]) > 1)}
 	df_montagnards = pd.DataFrame.from_dict(Montagnards, orient = "index")
-	write_to_excel(df_montagnards, "Montagnards_counts_withplein.xlsx")
+	write_to_excel(df_montagnards, "Montagnards_counts.xlsx")
 
 	# Normalizes the vectors and computes the distance between them
 	#normalized = normalize_dicts(Girondins, Montagnards)
