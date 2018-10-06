@@ -23,10 +23,7 @@ import os
 from make_ngrams import compute_ngrams
 import math
 from collections import defaultdict
-from sklearn.linear_model import LogisticRegression
-from sklearn import metrics, cross_validation
 from processing_functions import write_to_excel, load_list, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
-from lr_classification import run_train_classification, run_test_classification
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
 

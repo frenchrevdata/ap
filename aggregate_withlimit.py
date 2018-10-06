@@ -132,8 +132,8 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	with open("bigram_doc_freq_noplein_withlimit.pickle", 'wb') as handle:
 		pickle.dump(bigram_doc_freq, handle, protocol = 0)
 
-	Girondins = {k:v for k,v in Girondins.items() if (v >= 10)} #and (len(gir_docs[k]) > 1)}
-	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10)} #and (len(mont_docs[k]) > 1)}
+	#Girondins = {k:v for k,v in Girondins.items() if (v >= 10)} #and (len(gir_docs[k]) > 1)}
+	#Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10)} #and (len(mont_docs[k]) > 1)}
 
 	with open("Girondins_withlimit.pickle", 'wb') as handle:
 		pickle.dump(Girondins, handle, protocol = 0)
@@ -165,11 +165,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	write_to_excel(df_tfidf_combined, 'combined_tfidf_withlimit.xlsx')
 
 	# Constrains the analysis of Girondins and Montagnards frequencies if the frequency more 3 and optionally if in a certain number of speeches
-	#Girondins = {k:v for k,v in Girondins.items() if (v >= 3)} #and (len(gir_docs[k]) > 1)}
+	Girondins = {k:v for k,v in Girondins.items() if (v >= 10)} #and (len(gir_docs[k]) > 1)}
 	df_girondins = pd.DataFrame.from_dict(Girondins, orient = "index")
 	write_to_excel(df_girondins, "Girondins_counts_withlimit.xlsx")
 
-	#Montagnards = {k:v for k,v in Montagnards.items() if (v >= 3)} #and (len(mont_docs[k]) > 1)}
+	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10)} #and (len(mont_docs[k]) > 1)}
 	df_montagnards = pd.DataFrame.from_dict(Montagnards, orient = "index")
 	write_to_excel(df_montagnards, "Montagnards_counts_withlimit.xlsx")
 

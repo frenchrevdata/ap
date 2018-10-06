@@ -34,12 +34,18 @@ speechid_to_speaker = {}
 names_not_caught = set()
 speeches_per_day = {}
 speakers_using_find = set()
+speakers = set()
+speaker_num_total_speeches = {}
+speaker_num_total_chars = {}
+speakers_per_session = {}
 global speaker_list
 
 def parseFiles(raw_speeches):
 	# Assumes all xml files are stored in a Docs folder in the same directory as the python file
     files = os.listdir("Docs/")
     dates = set()
+    num_sessions = 0
+    num_morethan1_session = 0
     for filename in files:
         if filename.endswith(".xml"):
         	print(filename)
@@ -57,7 +63,9 @@ def parseFiles(raw_speeches):
 		        if (date >= "1789-05-05") and (date <= "1795-01-04") and (date != "error"):
 		        	# Datas is a dataset keeping track of dates already looked at
 		        	# Accounts for multiple sessions per day
+		        	num_sessions += 1
 		        	if date in dates:
+		        		num_morethan1_session += 1
 		        		date = date + "_soir"
 		        		if date in dates:
 		        			date = date + "2"
@@ -69,6 +77,12 @@ def parseFiles(raw_speeches):
 		        		findSpeeches(raw_speeches, session, date, volno)
 		        		dates.add(date)
 	        filename.close()
+	pickle_filename = "num_sessions.pickle"
+    with open("num_sessions.pickle", 'wb') as handle:
+    	pickle.dump(num_sessions, handle, protocol = 0)
+    pickle_filename = "num_morethan1_session.pickle"
+    with open("num_morethan1_session.pickle", 'wb') as handle:
+    	pickle.dump(num_morethan1_session, handle, protocol = 0)
 
 def findSpeeches(raw_speeches, daily_soup, date, volno):
 	id_base = date.replace("/","_")
@@ -124,6 +138,20 @@ def findSpeeches(raw_speeches, daily_soup, date, volno):
 		if speaker_name is not "":
 			speaker_name = remove_diacritic(speaker_name).decode('utf-8')
 			number_of_speeches = number_of_speeches + 1
+			if(speaker_name in speaker_num_total_speeches):
+				speaker_num_total_speeches[speaker_name] = speaker_num_total_speeches[speaker_name] + 1
+			else:
+				speaker_num_total_speeches[speaker_name] = 1
+			if(speaker_name in speaker_num_total_chars):
+				speaker_num_total_chars[speaker_name] = speaker_num_total_chars[speaker_name] + len(full_speech)
+			else:
+				speaker_num_total_chars[speaker_name] = len(full_speech)
+			if id_base in speakers_per_session:
+				speakers_per_session[id_base].add(speaker_name)
+			else:
+				speakers_per_session[id_base] = set()
+				speakers_per_session[id_base].add(speaker_name)
+			speakers.add(speaker_name)
 			speech_id = "" + id_base + "_" + str(number_of_speeches)
 			speechid_to_speaker[speech_id] = speaker_name
 			raw_speeches[speech_id] = full_speech
@@ -163,6 +191,11 @@ if __name__ == '__main__':
     	file.write(item)
     file.close()
 
+    file = open('speakers.txt', 'w')
+    for item in sorted(speakers):
+    	file.write(item + "\n")
+    file.close()
+
     pickle_filename = "speechid_to_speaker.pickle"
     with open(pickle_filename, 'wb') as handle:
     	pickle.dump(speechid_to_speaker, handle, protocol = 0)
@@ -171,6 +204,37 @@ if __name__ == '__main__':
     with open(pickle_filename_2, 'wb') as handle:
     	pickle.dump(raw_speeches, handle, protocol = 0)
 
+    pickle_filename_2 = "speaker_num_total_speeches.pickle"
+    with open(pickle_filename_2, 'wb') as handle:
+    	pickle.dump(speaker_num_total_speeches, handle, protocol = 0)
+
+    pickle_filename_2 = "speaker_num_total_chars.pickle"
+    with open(pickle_filename_2, 'wb') as handle:
+    	pickle.dump(speaker_num_total_chars, handle, protocol = 0)
+
+    pickle_filename_2 = "speakers.pickle"
+    with open(pickle_filename_2, 'wb') as handle:
+    	pickle.dump(speakers, handle, protocol = 0)
+
+    pickle_filename_2 = "speeches_per_session.pickle"
+    with open(pickle_filename_2, 'wb') as handle:
+    	pickle.dump(speeches_per_day, handle, protocol = 0)
+
+    pickle_filename = "speakers_per_session.pickle"
+    with open(pickle_filename, 'wb') as handle:
+    	pickle.dump(speakers_per_session, handle, protocol = 0)
+
+    w = csv.writer(open("speaker_num_total_speeches.csv", "w"))
+    for key, val in speaker_num_total_speeches.items():
+    	w.writerow([key, val])
+
+    w = csv.writer(open("speaker_num_total_chars.csv", "w"))
+    for key, val in speaker_num_total_chars.items():
+    	w.writerow([key, val])
+
+    w = csv.writer(open("speeches_per_session.csv", "w"))
+    for key, val in speeches_per_day.items():
+    	w.writerow([key, val])
 
     
        

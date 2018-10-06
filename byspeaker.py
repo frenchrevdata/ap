@@ -30,7 +30,7 @@ def firststep():
 	# file = open('num_speeches.txt', 'r')
 	# num_speeches = int(file.read())
 	# doc_freq = pickle.load(open("bigram_doc_freq.pickle", "rb"))
-	speakers_to_analyze = load_list("Girondins and Montagnards New Mod.xlsx")
+	speakers_to_analyze = load_list("Girondins and Montagnards New Mod Limit.xlsx")
 
 	for speaker in speakers_to_analyze.index.values:
 		speakers_to_consider.append(remove_diacritic(speaker).decode('utf-8'))
@@ -41,8 +41,6 @@ def firststep():
 			speech_bigrams = compute_ngrams(raw_speeches[speechid], 2)
 
 			speaker = speechid_to_speaker[speechid]
-
-			print speaker
 			
 			if speaker in speakers_to_consider:
 				if speaker in byspeaker:

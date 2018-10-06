@@ -47,7 +47,7 @@ def distance_analysis():
 
 	#by_speaker = create_tfidf_vectors(by_speaker)
 	by_speaker_dist = compute_distances(by_speaker)
-	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_withlimit.xlsx')
+	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_withlimit_nosub.xlsx')
 
 	"""by_speaker_allspeakers = create_tfidf_vectors(by_speaker_allspeakers)
 	by_speaker_allspeakers_dist = compute_distances(by_speaker_allspeakers, 'speaker', gir_dict, mont_dict, plein_dict, gir_mont_diff)
@@ -89,19 +89,14 @@ def create_tfidf_vectors(dataframe):
 
 # This function computes the cosine similarity and distances between the given dataframe and the three points of analysis
 # It assumes that the dataframe contains a tfidf column
-def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
+def compute_distances(dataframe):
 	period_vector = []
-	if (period == 'aggregation') or (period == 'speaker'):
-		period_vector = list(dataframe.keys())
-		period_vector = pd.Series(period_vector)
-		speaker_num_speeches = pickle.load(open("speaker_num_speeches_withlimit.pickle", "rb"))
-		"""period_vector = pd.Series(period_vector)
-		tfidf_scores = dataframe['tfidf'].tolist()"""
-	else:
-		periods = ["Before convention", "Convention", "After convention"]
-		period_vector = pd.Series(periods)
-		# This assumes that tfidf_scores for the periods is a list not a pandas dataframe
-
+	period_vector = list(dataframe.keys())
+	period_vector = pd.Series(period_vector)
+	speaker_num_speeches = pickle.load(open("speaker_num_speeches_withlimit.pickle", "rb"))
+	"""period_vector = pd.Series(period_vector)
+	tfidf_scores = dataframe['tfidf'].tolist()"""
+	
 	gir_dist = []
 	mont_dist = []
 	gir_mont_diff_dist = []
@@ -130,16 +125,20 @@ def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 
 		print element
 		print party
+		print type(gir)
 		print type(dataframe[element])
 
-		if party == 'Girondins':
+		"""if party == 'Girondins':
 			gir = gir - dataframe[element]
 		if party == 'Montagnards':
-			mont = mont - dataframe[element]
+			mont = mont - dataframe[element]"""
 
 		"""# Normalizing by number of speeches
 		gir_normalized = normalize_by_speeches(gir, gir_num_speeches)
 		mont_normalized = normalize_by_speeches(mont, mont_num_speeches)"""
+
+		gir = {k:v for k,v in gir.items() if (v >= 10)} #and (len(gir_docs[k]) > 1)}
+		mont = {k:v for k,v in mont.items() if (v >= 10)} #and (len(mont_docs[k]) > 1)}
 
 		gir_dict = convert_keys_to_string(compute_tfidf(gir, num_speeches, doc_freq))
 		mont_dict = convert_keys_to_string(compute_tfidf(mont, num_speeches, doc_freq))
@@ -154,10 +153,10 @@ def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 			w.writerow([key, val])
 
 		# Normalizing the speaker data as well
-		speaker_speeches = speaker_num_speeches[element]
-		speaker_dict = normalize_by_speeches(dataframe[element], speaker_speeches)
+		#speaker_speeches = speaker_num_speeches[element]
+		#speaker_dict = normalize_by_speeches(dataframe[element], speaker_speeches)
 
-		#speaker_dict = dataframe[element]
+		speaker_dict = dataframe[element]
 
 		tfidf_speaker = compute_tfidf(speaker_dict, num_speeches, doc_freq)
 
@@ -186,7 +185,7 @@ def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 	gir_mont_diff_dist = pd.Series(gir_mont_diff_dist)
 	comp_df = pd.DataFrame([period_vector, gir_dist, mont_dist, gir_mont_diff_dist])
 	comp_df = comp_df.transpose()
-	comp_df.columns = [period, 'distance to gir', 'distance to mont', 'distance to diff']
+	comp_df.columns = ['speaker', 'distance to gir', 'distance to mont', 'distance to diff']
 	return comp_df
 
 
