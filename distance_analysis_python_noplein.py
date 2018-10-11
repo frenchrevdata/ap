@@ -54,7 +54,7 @@ def distance_analysis():
 
 	#by_speaker = create_tfidf_vectors(by_speaker)
 	by_speaker_dist = compute_distances(by_speaker, 'speaker', gir_dict, mont_dict, gir_mont_diff)
-	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_speaker_group_normalized.xlsx')
+	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_speaker_withsub.xlsx')
 
 	"""by_speaker_allspeakers = create_tfidf_vectors(by_speaker_allspeakers)
 	by_speaker_allspeakers_dist = compute_distances(by_speaker_allspeakers, 'speaker', gir_dict, mont_dict, plein_dict, gir_mont_diff)
@@ -146,11 +146,11 @@ def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 				mont = mont - dataframe[element]
 
 			# Normalizing by number of speeches
-			gir_normalized = normalize_by_speeches(gir, gir_num_speeches)
-			mont_normalized = normalize_by_speeches(mont, mont_num_speeches)
+			#gir_normalized = normalize_by_speeches(gir, gir_num_speeches)
+			#mont_normalized = normalize_by_speeches(mont, mont_num_speeches)
 
-			gir_dict = convert_keys_to_string(compute_tfidf(gir_normalized, num_speeches, doc_freq))
-			mont_dict = convert_keys_to_string(compute_tfidf(mont_normalized, num_speeches, doc_freq))
+			gir_dict = convert_keys_to_string(compute_tfidf(gir, num_speeches, doc_freq))
+			mont_dict = convert_keys_to_string(compute_tfidf(mont, num_speeches, doc_freq))
 			gir_mont_diff = compute_difference_withplein(gir_dict, mont_dict)
 
 			# Resets the Gir and Mont vectors to their unnormalized version
@@ -162,10 +162,10 @@ def compute_distances(dataframe, period, gir_dict, mont_dict, gir_mont_diff):
 				w.writerow([key, val])
 
 			# Normalizing the speaker data as well
-			speaker_speeches = speaker_num_speeches[element]
-			speaker_dict = normalize_by_speeches(dataframe[element], speaker_speeches)
+			#speaker_speeches = speaker_num_speeches[element]
+			#speaker_dict = normalize_by_speeches(dataframe[element], speaker_speeches)
 
-			#speaker_dict = dataframe[element]
+			speaker_dict = dataframe[element]
 
 			tfidf_speaker = compute_tfidf(speaker_dict, num_speeches, doc_freq)
 

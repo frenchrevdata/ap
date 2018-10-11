@@ -47,7 +47,7 @@ def distance_analysis():
 
 	#by_speaker = create_tfidf_vectors(by_speaker)
 	by_speaker_dist = compute_distances(by_speaker)
-	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_withlimit_nosub.xlsx')
+	write_to_excel(by_speaker_dist, 'by_speaker_noplein_distances_withlimit_withsub.xlsx')
 
 	"""by_speaker_allspeakers = create_tfidf_vectors(by_speaker_allspeakers)
 	by_speaker_allspeakers_dist = compute_distances(by_speaker_allspeakers, 'speaker', gir_dict, mont_dict, plein_dict, gir_mont_diff)
@@ -124,14 +124,11 @@ def compute_distances(dataframe):
 		party = speakers_to_analyze.loc[element, "Party"]
 
 		print element
-		print party
-		print type(gir)
-		print type(dataframe[element])
 
-		"""if party == 'Girondins':
+		if party == 'Girondins':
 			gir = gir - dataframe[element]
 		if party == 'Montagnards':
-			mont = mont - dataframe[element]"""
+			mont = mont - dataframe[element]
 
 		"""# Normalizing by number of speeches
 		gir_normalized = normalize_by_speeches(gir, gir_num_speeches)

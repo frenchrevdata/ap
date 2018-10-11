@@ -34,7 +34,8 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	speaker_char_count = {}
 	speakers_to_consider = []
 
-	bigrams_to_speeches = collections.defaultdict()
+	bigrams_to_speeches = {}
+	bigrams_to_speakers = {}
 	bigram_doc_freq = collections.defaultdict()
 
 	gir_num_speeches = 0
@@ -72,6 +73,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 					else:
 						bigrams_to_speeches[bigram] = []
 						bigrams_to_speeches[bigram].append(identity)
+					if bigram in bigrams_to_speakers:
+						bigrams_to_speakers[bigram].add(speaker_name)
+					else:
+						bigrams_to_speakers[bigram] = set()
+						bigrams_to_speakers[bigram].add(speaker_name)
 
 				# Augments the relevant variables according to the party the speaker belongs to
 				if party == "Girondins":
@@ -100,6 +106,12 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	"""# Stores the bigrams_to_speeches document in Excel
 	df_bigrams_to_speeches = pd.DataFrame.from_dict(bigrams_to_speeches, orient = "index")
 	write_to_excel(df_bigrams_to_speeches, 'bigrams_to_speeches.xlsx')"""
+	w = csv.writer(open("bigrams_to_speeches_noplein.csv", "w"))
+	for key, val in bigrams_to_speeches.items():
+		w.writerow([key,val])
+	w = csv.writer(open("bigrams_to_speakers_noplein.csv", "w"))
+	for key, val in bigrams_to_speakers.items():
+		w.writerow([key,val])
 
 	# Computes the tf_idf scores for each bigram and for both the Girondins and Montaganards vectors
 	num_speeches = gir_num_speeches + mont_num_speeches
@@ -165,11 +177,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	write_to_excel(df_tfidf_combined, 'combined_tfidf_withlimit.xlsx')
 
 	# Constrains the analysis of Girondins and Montagnards frequencies if the frequency more 3 and optionally if in a certain number of speeches
-	Girondins = {k:v for k,v in Girondins.items() if (v >= 10)} #and (len(gir_docs[k]) > 1)}
+	Girondins = {k:v for k,v in Girondins.items() if (v >= 10) and (len(gir_docs[k]) > 1)}
 	df_girondins = pd.DataFrame.from_dict(Girondins, orient = "index")
 	write_to_excel(df_girondins, "Girondins_counts_withlimit.xlsx")
 
-	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10)} #and (len(mont_docs[k]) > 1)}
+	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10) and (len(mont_docs[k]) > 1)}
 	df_montagnards = pd.DataFrame.from_dict(Montagnards, orient = "index")
 	write_to_excel(df_montagnards, "Montagnards_counts_withlimit.xlsx")
 

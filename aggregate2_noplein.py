@@ -23,10 +23,7 @@ import os
 from make_ngrams import compute_ngrams
 import math
 from collections import defaultdict
-from sklearn.linear_model import LogisticRegression
-from sklearn import metrics, cross_validation
 from processing_functions import write_to_excel, load_list, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
-from lr_classification import run_train_classification, run_test_classification
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
 
@@ -115,17 +112,17 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 		f.write('%d' % mont_num_speeches)
 	print num_speeches
 
-	with open('speaker_num_speeches.pickle', 'wb') as handle:
+	with open('speaker_num_speeches_noplein.pickle', 'wb') as handle:
 		pickle.dump(speaker_num_speeches, handle, protocol = 0)
 
-	with open('speaker_char_count.pickle', 'wb') as handle:
+	with open('speaker_char_count_noplein.pickle', 'wb') as handle:
 		pickle.dump(speaker_num_speeches, handle, protocol = 0)
 
-	w = csv.writer(open("speaker_num_speeches.csv", "w"))
+	w = csv.writer(open("speaker_num_speeches_noplein.csv", "w"))
 	for key, val in speaker_num_speeches.items():
 		w.writerow([key, val])
 
-	w = csv.writer(open("speaker_char_count.csv", "w"))
+	w = csv.writer(open("speaker_char_count_noplein.csv", "w"))
 	for key, val in speaker_char_count.items():
 		w.writerow([key, val])
 
