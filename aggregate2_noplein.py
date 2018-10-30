@@ -103,6 +103,9 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	"""# Stores the bigrams_to_speeches document in Excel
 	df_bigrams_to_speeches = pd.DataFrame.from_dict(bigrams_to_speeches, orient = "index")
 	write_to_excel(df_bigrams_to_speeches, 'bigrams_to_speeches.xlsx')"""
+	w = csv.writer(open("bigrams_to_speeches_noplein.csv", "w"))
+	for key, val in bigrams_to_speeches.items():
+		w.writerrow([key,val])
 
 	# Computes the tf_idf scores for each bigram and for both the Girondins and Montaganards vectors
 	num_speeches = gir_num_speeches + mont_num_speeches

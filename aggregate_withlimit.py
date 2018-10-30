@@ -113,6 +113,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	for key, val in bigrams_to_speakers.items():
 		w.writerow([key,val])
 
+	bigrams_to_speakers_noplein_sorted = sorted(bigrams_to_speakers.items(), key = lambda x: len(x[1]), reverse = True)
+	w = csv.writer(open("bigrams_to_speakers_noplein_sorted.csv", "w"))
+	for item in bigrams_to_speakers_noplein_sorted:
+		w.writerow([item[0], item[1]])
+
 	# Computes the tf_idf scores for each bigram and for both the Girondins and Montaganards vectors
 	num_speeches = gir_num_speeches + mont_num_speeches
 	with open('gir_speeches_noplein_withlimit.txt', 'w') as f:
@@ -177,11 +182,11 @@ def aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker, Girondins,
 	write_to_excel(df_tfidf_combined, 'combined_tfidf_withlimit.xlsx')
 
 	# Constrains the analysis of Girondins and Montagnards frequencies if the frequency more 3 and optionally if in a certain number of speeches
-	Girondins = {k:v for k,v in Girondins.items() if (v >= 10) and (len(gir_docs[k]) > 1)}
+	Girondins = {k:v for k,v in Girondins.items() if (v >= 10) and (len(gir_docs[k]) > 2)}
 	df_girondins = pd.DataFrame.from_dict(Girondins, orient = "index")
 	write_to_excel(df_girondins, "Girondins_counts_withlimit.xlsx")
 
-	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10) and (len(mont_docs[k]) > 1)}
+	Montagnards = {k:v for k,v in Montagnards.items() if (v >= 10) and (len(mont_docs[k]) > 2)}
 	df_montagnards = pd.DataFrame.from_dict(Montagnards, orient = "index")
 	write_to_excel(df_montagnards, "Montagnards_counts_withlimit.xlsx")
 
