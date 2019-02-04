@@ -6,13 +6,26 @@ Aggregates the Girondins and Montagnards data, while keeping track of various me
 in order to run classification and do predictive analysis.
 """
 
+from bs4 import BeautifulSoup
+import unicodedata
+import csv
 import pickle
 import regex as re
 import pandas as pd
 from pandas import *
+import numpy as np
+from nltk import word_tokenize
+from nltk.util import ngrams
+import collections
+from collections import Counter
+import os
 from make_ngrams import compute_ngrams
+import math
 from collections import defaultdict
-from processing_functions import print_to_csv, print_to_excel, load_list, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
+from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
+from processing_functions import write_to_excel, load_list, process_excel, remove_diacritic, compute_tfidf, normalize_dicts
+from lr_classification import run_train_classification, run_test_classification
 
 date_regex = '([0-9]{4}-[0-9]{2}-[0-9]{1,2})'
 
@@ -126,5 +139,5 @@ if __name__ == '__main__':
     import sys
     raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
     speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
-    speakers_to_analyze = load_list("Girondins and Montagnards New Mod 2.xlsx")
+    speakers_to_analyze = load_list("Girondins and Montagnards New Mod Limit.xlsx")
     aggregate(speakers_to_analyze, raw_speeches, speechid_to_speaker)

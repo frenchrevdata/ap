@@ -109,7 +109,7 @@ def convert_keys_to_string(dictionary):
 	return to_return
 
 # Computes the difference between the values of two dictionaries
-def compute_difference(dict1, dict2):
+def compute_difference_withplein(dict1, dict2):
 	diff = {}
 	keys_seen = []
 	for k in dict1:
@@ -122,6 +122,19 @@ def compute_difference(dict1, dict2):
 		if key not in keys_seen:
 			diff[key] = dict2[key]
 	return diff 
+
+def compute_difference(dict1, dict2):
+	diff = {}
+	for k in dict1:
+		diff[k] = dict1[k] - dict2[k]
+	return diff
+
+def normalize_by_speeches(dictionary, num_speeches):
+	to_return = {}
+	for k in dictionary:
+		to_return[k] = dictionary[k]/(1.0*num_speeches)
+	return to_return
+
 
 # Computes the cosine similiarity between two dictionaries
 # Cosine similarity is dot product over the norms of the two vectors

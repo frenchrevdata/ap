@@ -13,11 +13,12 @@ import pandas as pd
 from pandas import *
 import numpy as np
 import collections
+import math
 from collections import Counter
 from sklearn.linear_model import LogisticRegression
-from sklearn import metrics, cross_validation, preprocessing
+from sklearn import metrics, preprocessing
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from processing_functions import compute_tfidf
 from xgboost import XGBClassifier
 
@@ -32,17 +33,19 @@ def run_train_classification(bigram_speeches, unigram_speeches, bigram_freq, uni
 	##### There are two models - Logistic Regression and XGB
 
 	### Logistic Regression
-	"""model = LogisticRegression()
+	model = LogisticRegression(penalty = 'l1')
 	model.fit(train.get_values(), train_classification)
-	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)"""
+	cv_scores = cross_val_score(model, train.get_values(), train_classification, cv = 10)
 
 	### xgboost
-	model = XGBClassifier()
+	"""model = XGBClassifier()
 	model.fit(train.get_values(), train_classification)
-	predicted = cross_validation.cross_val_predict(model, train.get_values(), train_classification, cv = 10)
+	cv_scores = cross_val_score(model, train.get_values(), train_classification, cv = 10)"""
+	
+	print "Training CV Score: %f" % np.mean(cv_scores)
 
 
-	print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
+	#print ("Training CV Score: " + str(metrics.accuracy_score(train_classification, predicted)))
 
 	train_classification = pd.DataFrame(train_classification)
 	speeches = pd.DataFrame(speeches, columns = ['Speechid'])
@@ -92,7 +95,7 @@ def run_test_classification(model, train_columns, bigram_speeches, unigram_speec
 	predictions = model.predict(test.get_values())
 	predicted_values = pd.DataFrame(predictions, columns = ['Predicted'])
 	write_to = pd.ExcelWriter("predictions.xlsx")
-	real_pred.to_excel(write_to, 'Sheet1')
+	#real_pred.to_excel(write_to, 'Sheet1')
 	write_to.save()
 
 	# Develops and prints the confusion matrix
@@ -102,6 +105,7 @@ def run_test_classification(model, train_columns, bigram_speeches, unigram_speec
 	predict_prob = pd.DataFrame(model.predict_proba(test.get_values()), columns = ['Prob 0', 'Prob 1'])
 	
 	# Creates a comprehensive dataframe to develop an Excel file
+	real_pred = pd.DataFrame()
 	real_pred = pd.concat([test_classification_df, predicted_values, predict_prob, speeches, speakers], axis = 1)
 
 	test_total = pd.concat([test, test_classification_df, speeches, speakers], axis = 1)
@@ -138,7 +142,7 @@ def data_clean(iteration, train_columns, bigram_speeches, unigram_speeches, bigr
 		# Analysis accounts for bigrams and unigrams
 		if iteration == "train":
 			# Restricting features according to how many times they appear
-			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 17)}
+			bigram_input = {k:v for k,v in bigram_speeches[speechid].items() if (bigram_freq[k] >= 20)}
 			unigram_input = {k:v for k,v in unigram_speeches[speechid].items() if (unigram_freq[k] >= 62)}
 			
 			bigram_scores = compute_tfidf(bigram_input, num_speeches, bigram_doc_freq)
