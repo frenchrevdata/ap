@@ -1,1 +1,1 @@
-web: bokeh serve --show getspeechtext.py
+web: bokeh serve --port=$PORT --address=0.0.0.0 --allow-websocket-origin=getspeech.herokuapp.com --use-xheaders getspeechtext.py
