@@ -1,10 +1,35 @@
+import subprocess
+import sys
+
+def install(package):
+	subprocess.call([sys.executable, "-m", "pip", "install", package])
+
+install("bokeh")
+
+from google_drive_downloader import GoogleDriveDownloader as gdd
 from bokeh.io import curdoc
 from bokeh.layouts import column
 from bokeh.models.widgets import TextInput, Button, Paragraph
 import pickle
+import os
 
-raw_speeches = pickle.load(open("raw_speeches.pickle", "rb"))
-speechid_to_speaker = pickle.load(open("speechid_to_speaker.pickle", "rb"))
+
+curr_dir = os.path.dirname(os.path.realpath(__file__))
+data_dir = os.path.join(curr_dir, 'data')
+# check to see if data directory exists, if not make it
+if not os.path.isdir(data_dir):
+	os.mkdir(data_dir)
+
+
+def load_pickle_file(gdriveurl, filename):
+	pathname = os.path.join(data_dir, filename)
+	if not os.path.isfile(pathname):
+		gdd.download_file_from_google_drive(file_id=gdriveurl, dest_path=pathname)
+	with open(pathname, 'rb') as f:
+		return pickle.load(f)
+
+raw_speeches = load_pickle_file('1ghlAIXa9pBq1Qvc2JLfZMlb7uD2v6jCB', 'raw_speeches.pickle')
+speechid_to_speaker = load_pickle_file('1j2GGzjTrrzCvoAMpa08mtQnoTNbt4Kbe', 'speechid_to_speaker.pickle')
 
 button = Button(label = "Get Speech")
 input = TextInput(value = "Speechid")
