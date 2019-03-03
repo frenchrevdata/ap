@@ -1,11 +1,3 @@
-import subprocess
-import sys
-
-def install(package):
-	subprocess.call([sys.executable, "-m", "pip", "install", package])
-
-install("bokeh")
-
 from google_drive_downloader import GoogleDriveDownloader as gdd
 from bokeh.io import curdoc
 from bokeh.layouts import column
