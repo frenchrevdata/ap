@@ -40,11 +40,12 @@ def calculate_chronology(raw_speeches, speechid_to_speaker, speaker_list, speake
 		speaker_name = speechid_to_speaker[identity]
 		# print speaker_name
 		if (date >= "1792-09-20") and (date <= "1793-06-02") and (speaker_name in speakers_to_consider):
+			party = speakers_to_analyze.loc[speaker_name, "Party"]
 			indv_speech_bigram = compute_ngrams(raw_speeches[identity], 2)
 			for bigram in indv_speech_bigram:
-				row_entry_speechid.append([str(bigram), speaker_name, identity, indv_speech_bigram[bigram]])
+				row_entry_speechid.append([str(bigram), speaker_name, identity, indv_speech_bigram[bigram], party])
 				# chronology_speechid = chronology_speechid.append(pd.Series(row_entry_speechid), ignore_index = True)
-				row_entry_date.append([str(bigram), speaker_name, date, indv_speech_bigram[bigram]])
+				row_entry_date.append([str(bigram), speaker_name, date, indv_speech_bigram[bigram], party])
 				# chronology_date = chronology_date.append(pd.Series(row_entry_date), ignore_index = True)
 				# if bigram in chronology:
 				# 	chronology[bigram].append([speaker_name, identity, indv_speech_bigram[bigram]])
@@ -52,8 +53,8 @@ def calculate_chronology(raw_speeches, speechid_to_speaker, speaker_list, speake
 				# 	chronology[bigram] = []
 				# 	chronology[bigram].append([speaker_name, identity, indv_speech_bigram[bigram]])
 
-	chronology_speechid = pd.DataFrame(row_entry_speechid, columns = ["Bigram", "Speaker Name", "Speechid", "Num occurrences"])
-	chronology_date = pd.DataFrame(row_entry_date, columns = ["Bigram", "Speaker Name", "Date", "Num occurrences"])
+	chronology_speechid = pd.DataFrame(row_entry_speechid, columns = ["Bigram", "Speaker Name", "Speechid", "Num occurrences", "Party"])
+	chronology_date = pd.DataFrame(row_entry_date, columns = ["Bigram", "Speaker Name", "Date", "Num occurrences", "Party"])
 
 
 
@@ -77,13 +78,13 @@ def calculate_chronology(raw_speeches, speechid_to_speaker, speaker_list, speake
 	# filename.save()
 
 
-	# pickle_filename_2 = "chronology_speechid.pickle"
-	# with open(pickle_filename_2, 'wb') as handle:
-	# 	pickle.dump(chronology_speechid, handle, protocol = 0)
+	pickle_filename_2 = "chronology_speechid.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(chronology_speechid, handle, protocol = 0)
 
-	# pickle_filename = "chronology_date.pickle"
-	# with open(pickle_filename, 'wb') as handle:
-	# 	pickle.dump(chronology_date, handle, protocol = 0)
+	pickle_filename = "chronology_date.pickle"
+	with open(pickle_filename, 'wb') as handle:
+		pickle.dump(chronology_date, handle, protocol = 0)
 
 def make_visualizations(chronology_date):
 	# chronology_date = pd.DataFrame.from_dict(pickle.load(open("chronology.pickle", "rb")), orient = "index")

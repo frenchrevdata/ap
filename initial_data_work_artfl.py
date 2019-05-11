@@ -29,6 +29,7 @@ from processing_functions import remove_diacritic, load_speakerlist
 daily_regex = '(?:Séance[\s\S]{0,200}<date value=\")(?:[\s\S]+)(?:Séance[\s\S]{0,200}<date value=\")'
 page_regex = '(?:n=\"([A-Z0-9]+)" id="[a-z0-9_]+")\/>([\s\S]{1,9000})<pb '
 vol_regex = 'AP_ARTFL_vols\/AP(vol[0-9]{1,2}).xml'
+footnote_regex = r'<note place="foot">[\w\W]+<\/note>'
 
 speechid_to_speaker = {}
 names_not_caught = set()
@@ -116,8 +117,10 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		text = ""
 		full_speech = ""
 		for section in speech:
-			text = text + section.get_text()
+			text = text + " " + section.get_text()
 		full_speech = remove_diacritic(text).decode('utf-8')
+		full_speech = re.sub(r'<note place="foot">[\w\W]+<\/note>', ' ', full_speech)
+		full_speech = re.sub(r'\([0-9]{1,3}\)[\w\W]{1,100}', ' ', full_speech)
 		full_speech = full_speech.replace("\n"," ").replace("--"," ").replace("!"," ")
 		full_speech = re.sub(r'([ ]{2,})', ' ', full_speech)
 		full_speech = re.sub(r'([0-9]{1,4})', ' ', full_speech)
@@ -187,76 +190,82 @@ def extractDate(soup_file):
 		return("error")
 
 if __name__ == '__main__':
-    import sys
-    speaker_list = load_speakerlist('Copy of AP_Speaker_Authority_List_Edited_3.xlsx')
-    
-    raw_speeches = {}
-    multiple_speakers = {}
-    parseFiles(raw_speeches, multiple_speakers)
+	import sys
+	speaker_list = load_speakerlist('Copy of AP_Speaker_Authority_List_Edited_3.xlsx')
 
-    # Writes data to relevant files
-    txtfile = open("names_not_caught.txt", 'w')
-    for name in sorted(names_not_caught):
-    	txtfile.write(name)
-    txtfile.close()
+	raw_speeches = {}
+	multiple_speakers = {}
+	parseFiles(raw_speeches, multiple_speakers)
 
-    file = open('speakers_using_find.txt', 'w')
-    for item in sorted(speakers_using_find):
-    	file.write(item)
-    file.close()
+	# Writes data to relevant files
+	txtfile = open("names_not_caught.txt", 'w')
+	for name in sorted(names_not_caught):
+		txtfile.write(name)
+	txtfile.close()
 
-    file = open('speakers.txt', 'w')
-    for item in sorted(speakers):
-    	file.write(item + "\n")
-    file.close()
+	file = open('speakers_using_find.txt', 'w')
+	for item in sorted(speakers_using_find):
+		file.write(item)
+	file.close()
 
-    pickle_filename = "speechid_to_speaker.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(speechid_to_speaker, handle, protocol = 0)
+	file = open('speakers.txt', 'w')
+	for item in sorted(speakers):
+		file.write(item + "\n")
+	file.close()
 
-    pickle_filename_2 = "raw_speeches.pickle"
-    with open(pickle_filename_2, 'wb') as handle:
-    	pickle.dump(raw_speeches, handle, protocol = 0)
+	pickle_filename = "speechid_to_speaker.pickle"
+	with open(pickle_filename, 'wb') as handle:
+		pickle.dump(speechid_to_speaker, handle, protocol = 0)
+	w = csv.writer(open("rspeechid_to_speaker.csv", "w"))
+	for key, val in speechid_to_speaker.items():
+		w.writerow([key,val])
 
-    pickle_filename_3 = "multiple_speakers.pickle"
-    with open(pickle_filename_3, 'wb') as handle:
-    	pickle.dump(multiple_speakers, handle, protocol = 0)
+	pickle_filename_2 = "raw_speeches.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(raw_speeches, handle, protocol = 0)
+	w = csv.writer(open("raw_speeches.csv", "w"))
+	for key, val in raw_speeches.items():
+		w.writerow([key,val])
 
-    pickle_filename_2 = "speaker_num_total_speeches.pickle"
-    with open(pickle_filename_2, 'wb') as handle:
-    	pickle.dump(speaker_num_total_speeches, handle, protocol = 0)
+	pickle_filename_3 = "multiple_speakers.pickle"
+	with open(pickle_filename_3, 'wb') as handle:
+		pickle.dump(multiple_speakers, handle, protocol = 0)
 
-    pickle_filename_2 = "speaker_num_total_chars.pickle"
-    with open(pickle_filename_2, 'wb') as handle:
-    	pickle.dump(speaker_num_total_chars, handle, protocol = 0)
+	pickle_filename_2 = "speaker_num_total_speeches.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(speaker_num_total_speeches, handle, protocol = 0)
 
-    pickle_filename_2 = "speakers.pickle"
-    with open(pickle_filename_2, 'wb') as handle:
-    	pickle.dump(speakers, handle, protocol = 0)
+	pickle_filename_2 = "speaker_num_total_chars.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(speaker_num_total_chars, handle, protocol = 0)
 
-    pickle_filename_2 = "speeches_per_session.pickle"
-    with open(pickle_filename_2, 'wb') as handle:
-    	pickle.dump(speeches_per_day, handle, protocol = 0)
+	pickle_filename_2 = "speakers.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(speakers, handle, protocol = 0)
 
-    pickle_filename = "speakers_per_session.pickle"
-    with open(pickle_filename, 'wb') as handle:
-    	pickle.dump(speakers_per_session, handle, protocol = 0)
+	pickle_filename_2 = "speeches_per_session.pickle"
+	with open(pickle_filename_2, 'wb') as handle:
+		pickle.dump(speeches_per_day, handle, protocol = 0)
 
-    w = csv.writer(open("speaker_num_total_speeches.csv", "w"))
-    for key, val in speaker_num_total_speeches.items():
-    	w.writerow([key, val])
+	pickle_filename = "speakers_per_session.pickle"
+	with open(pickle_filename, 'wb') as handle:
+		pickle.dump(speakers_per_session, handle, protocol = 0)
 
-    w = csv.writer(open("speaker_num_total_chars.csv", "w"))
-    for key, val in speaker_num_total_chars.items():
-    	w.writerow([key, val])
+	w = csv.writer(open("speaker_num_total_speeches.csv", "w"))
+	for key, val in speaker_num_total_speeches.items():
+		w.writerow([key, val])
 
-    w = csv.writer(open("speeches_per_session.csv", "w"))
-    for key, val in speeches_per_day.items():
-    	w.writerow([key, val])
+	w = csv.writer(open("speaker_num_total_chars.csv", "w"))
+	for key, val in speaker_num_total_chars.items():
+		w.writerow([key, val])
 
-    w = csv.writer(open("multiple_speakers.csv", "w"))
-    for key, val in multiple_speakers.items():
-    	w.writerow([key, val])
+	w = csv.writer(open("speeches_per_session.csv", "w"))
+	for key, val in speeches_per_day.items():
+		w.writerow([key, val])
+
+	w = csv.writer(open("multiple_speakers.csv", "w"))
+	for key, val in multiple_speakers.items():
+		w.writerow([key, val])
 
     
        

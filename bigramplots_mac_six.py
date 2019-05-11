@@ -23,7 +23,7 @@ def get_data(bigram):
 	ys = num_per_date["Num occurrences"].tolist()
 	return dict(x=xs,y=ys)
 
-# inputp = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+# inputp = TextInput(value = "('convention', 'renvoie')", width = 500)
 # buttonp = Button(label="Plot")
 
 hover = HoverTool(
@@ -34,46 +34,46 @@ hover = HoverTool(
 	formatters = {"x":"datetime"},
 	mode = "mouse")
 
-inputp = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputp = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttonp = Button(label="Plot", width = 500)
 
 p = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sourcep = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sourcep = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 p.line(x='x', y='y', line_width = 2, source = sourcep)
 
-inputq = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputq = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttonq = Button(label="Plot", width = 500)
 
 q = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sourceq = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sourceq = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 q.line(x='x', y='y', line_width = 2, line_color = "green", source = sourceq)
 
-inputr = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputr = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttonr = Button(label="Plot", width = 500)
 
 r = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sourcer = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sourcer = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 r.line(x='x', y='y', line_width = 2, line_color = "red", source = sourcer)
 
-inputs = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputs = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttons = Button(label="Plot", width = 500)
 
 s = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sources = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sources = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 s.line(x='x', y='y', line_width = 2, line_color = "blueviolet", source = sources)
 
-inputt = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputt = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttont = Button(label="Plot", width = 500)
 
 t = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sourcet = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sourcet = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 t.line(x='x', y='y', line_width = 2, line_color = "orange", source = sourcet)
 
-inputw = TextInput(value = "(u'convention', u'renvoie')", width = 500)
+inputw = TextInput(value = "('convention', 'renvoie')", width = 500)
 buttonw = Button(label="Plot", width = 500)
 
 w = figure(x_axis_type = "datetime", plot_width = 500, plot_height = 500, tools = [hover], title = "Bigram over time")
-sourcew = ColumnDataSource(data = get_data("(u'convention', u'renvoie')"))
+sourcew = ColumnDataSource(data = get_data("('convention', 'renvoie')"))
 w.line(x='x', y='y', line_width = 2, line_color = "teal", source = sourcew)
 
 
