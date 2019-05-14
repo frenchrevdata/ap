@@ -36,6 +36,7 @@ footnote_regex = r'<note place="foot">[\w\W]+<\/note>'
 speechid_to_speaker = {}
 speakers_seen = set()
 speaker_dists = []
+speaker_dists_split = []
 footnotes = []
 names_not_caught = set()
 speeches_per_day = {}
@@ -122,6 +123,8 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		# Removes the footnotes
 		if talk.find("note"):
 			ftnotes = talk.note.extract()
+			ftnotes = remove_diacritic(ftnotes.get_text()).decode('utf-8')
+			ftnotes = ftnotes.replace("\n","").replace("\r","").replace("\t","").replace("  "," ")
 			speech_id = "" + id_base + "_" + str(number_of_speeches + 1)
 			footnotes.append([ftnotes, speaker, speech_id, volno])
 
@@ -138,7 +141,10 @@ def findSpeeches(raw_speeches, multiple_speakers, daily_soup, date, volno):
 		else:
 
 			if speaker not in speakers_seen:
-				speaker_dists.append([speaker, compute_speaker_Levenshtein_distance(speaker), volno, date])
+				matches = compute_speaker_Levenshtein_distance(speaker)
+				speaker_dists.append([speaker, matches, volno, date])
+				for full_speaker in matches:
+					speaker_dists_split.append([speaker, full_speaker[0], full_speaker[1], volno, date])
 		speakers_seen.add(speaker)
 
 			# if speaker not in speaker_dists:
@@ -243,6 +249,12 @@ if __name__ == '__main__':
 
 	write_to = pd.ExcelWriter("speaker_distances.xlsx")
 	speaker_distances.to_excel(write_to, 'Sheet1')
+	write_to.save()
+
+	speaker_distances_split = pd.DataFrame(speaker_dists_split, columns = ["Speaker Name", "Full Name", "Distance", "Volno", "Date"])
+
+	write_to = pd.ExcelWriter("speaker_distances_split.xlsx")
+	speaker_distances_split.to_excel(write_to, 'Sheet1')
 	write_to.save()
 
 	footnotes = pd.DataFrame(footnotes, columns = ["Footnote", "Speaker", "Speechid", "Volno"])

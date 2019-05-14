@@ -67,7 +67,8 @@ def compute_speaker_Levenshtein_distance(speaker_name):
 		else:
 			distance_size[full_name] = dist
 	dist_size_sorted = sorted(distance_size.items(), key = lambda kv: kv[1])
-	return dist_size_sorted[:5]
+
+	return dist_size_sorted[:2]
 
 
 if __name__ == '__main__':
